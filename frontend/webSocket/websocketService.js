@@ -11,10 +11,7 @@ class WebSocketService {
     console.log(url);
     
     if (!this.socket) {
-      this.socket = io(url, {
-        transports: ["websocket"], // Force WebSockets only (no polling)
-        withCredentials: true, // Allow credentials
-      });
+      this.socket = io(url);
       this.socket.on("connect", () => {
         console.log("Socket.IO Connected ✅");
       });
