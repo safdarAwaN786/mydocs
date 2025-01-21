@@ -6,7 +6,7 @@ import { useAtom } from 'jotai';
 import { currentDoc, showComments } from '@/store/atoms';
 import { useParams, useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
-import { fetchDocument } from '@/API-calls/Documents/docsNormal';
+import { fetchDocument, WS_URL } from '@/API-calls/Documents/docsNormal';
 import Loading from '../layout/Loading';
 import { BiCommentAdd } from "react-icons/bi";
 import { BsEmojiLaughing } from "react-icons/bs";
@@ -51,7 +51,7 @@ export default function TextEditor() {
     } else {
       setContentToShow(docData.content)
     }
-    websocketService.connect(process.env.NEXT_PUBLIC_WSOCKET_URL, setDocData);
+    websocketService.connect(WS_URL, setDocData);
     return () => websocketService.disconnect();
   }, []);
 

@@ -1,8 +1,11 @@
 export const BASE_URL = "http://localhost:5000/api";
+// export const WS_URL = "ws://localhost:5000;
+export const WS_URL = "wss://mydocs-oxbq.onrender.com";
+
+
+
 export const createNewDoc = async () => {
   try {
-    console.log(process.env.NEXT_PUBLIC_API_URL);
-
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/create-doc`,
       {
