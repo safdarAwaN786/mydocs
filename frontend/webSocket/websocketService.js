@@ -8,9 +8,13 @@ class WebSocketService {
 
   connect(url, setWsData) {
     // Connect to Socket.IO server
+    console.log(url);
+    
     if (!this.socket) {
-      this.socket = io(url); // Connect using socket.io-client
-
+      this.socket = io(url, {
+        transports: ["websocket"], // Force WebSockets only (no polling)
+        withCredentials: true, // Allow credentials
+      });
       this.socket.on("connect", () => {
         console.log("Socket.IO Connected ✅");
       });

@@ -8,10 +8,17 @@ const {  setupSocketServer } = require("./websockets"); // Import WebSocket setu
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
+// Enable CORS for all routes
 
 // Routes
 const apiRoutes = require("./routes/index");

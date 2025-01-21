@@ -51,7 +51,7 @@ export default function TextEditor() {
     } else {
       setContentToShow(docData.content)
     }
-    websocketService.connect("ws://localhost:5000", setDocData);
+    websocketService.connect(process.env.NEXT_PUBLIC_WSOCKET_URL, setDocData);
     return () => websocketService.disconnect();
   }, []);
 

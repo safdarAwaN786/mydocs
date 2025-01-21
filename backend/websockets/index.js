@@ -6,11 +6,10 @@ const commentEvents = require("./commentEvents");
 function setupSocketServer(server) {
   const io = socketIo(server, {
     cors: {
-      origin: "*",  // Allow connections from the frontend
-      methods: ["GET", "POST"],         // Allowed HTTP methods
-      allowedHeaders: ["my-custom-header"],  // You can add any custom headers if needed
-      credentials: true, // Allow cookies to be sent with requests
+      origin: "*", // Allow all origins
+      methods: ["GET", "POST"],
     },
+    transports: ["websocket", "polling"], // Ensure both polling & WebSocket
   });
   // Handle socket connections
   io.on("connection", (socket) => {
