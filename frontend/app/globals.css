@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+
+
+/* Webkit-based browsers (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 9px !important; /* Decrease width */
+}
+
+::-webkit-scrollbar-track {
+  background: #fafafa ; /* Optional: Makes track invisible */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bababa !important; /* Your theme color */
+  border-radius: 50px !important; /* Circular effect */
+  background-clip: content-box !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #585858 !important; /* Darker green on hover */
+}

@@ -1,0 +1,30 @@
+.jodit-status-bar a.jodit-status-bar-link {
+  display: none !important;
+}
+
+.jodit-container:not(.jodit_inline) .jodit-wysiwyg {
+  min-height: 2000px !important;
+  padding: 34px !important;
+  border: 1px solid #949393 !important;
+}
+
+.jodit-container:not(.jodit_inline) .jodit-workplace {
+  width: 800px !important;
+  margin: 20px auto !important;
+}
+
+.jodit-toolbar-editor-collection_size_middle.jodit-toolbar-editor-collection_mode_horizontal {
+  background-color: #e9e9e9 !important;
+  border-radius: 20px !important;
+}
+
+.jodit-toolbar__box:not(:empty) {
+  border: none !important;
+}
+.jodit-container:not(.jodit_inline) {
+  background-color: #fafafa !important;
+  border-width: 0px !important;
+}
+.jodit-toolbar__box:not(:empty):not(:empty) {
+    background-color: #fafafa !important;
+}
