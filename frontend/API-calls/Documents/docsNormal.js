@@ -1,4 +1,5 @@
-export const BASE_URL = "http://localhost:5000/api";
+// export const BASE_URL = "http://localhost:5000/api";
+export const BASE_URL = "https://mydocs-oxbq.onrender.com/api";
 // export const WS_URL = "ws://localhost:5000"
 export const WS_URL = "wss://mydocs-oxbq.onrender.com";
 
@@ -7,7 +8,7 @@ export const WS_URL = "wss://mydocs-oxbq.onrender.com";
 export const createNewDoc = async () => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/create-doc`,
+      `${BASE_URL}/create-doc`,
       {
         method: "POST",
         headers: {
@@ -30,7 +31,7 @@ export const createNewDoc = async () => {
 
 export const fetchDocument = async (docId) => {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/documentById/${docId}`
+    `${BASE_URL}/documentById/${docId}`
   );
   if (!response.ok) {
     throw new Error("Failed to fetch the document");
@@ -40,7 +41,7 @@ export const fetchDocument = async (docId) => {
 
 export const fetchAllDocuments = async () => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents`, {
+    const response = await fetch(`${BASE_URL}/documents`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
