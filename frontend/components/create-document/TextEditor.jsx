@@ -45,8 +45,6 @@ export default function TextEditor() {
   });
 
   useEffect(() => {
-    const contentContainer = document.getElementById("content-container");
-    contentContainer.addEventListener("scroll", handleScroll);
     if (!docData) {
       mutate(params.docId);
     } else {
@@ -56,43 +54,29 @@ export default function TextEditor() {
     return () => websocketService.disconnect();
   }, []);
 
-
-  
-    const handleScroll = () => {
-      const storedSelection = JSON.parse(localStorage.getItem('commentFor'));
-      if (!storedSelection) return;
-      const contentContainer = document.getElementById("content-container");
-  
-      const container = document.getElementsByClassName('jodit-wysiwyg')[0];
-      const textNodes = getTextNodes(container);
-      const sideBox = document.getElementById('sideBox');
-  
-      const range = document.createRange();
-      const selection = window.getSelection();
-  
-      if (
-        storedSelection.startNodeIndex >= 0 &&
-        storedSelection.endNodeIndex >= 0 &&
-        textNodes[storedSelection.startNodeIndex] &&
-        textNodes[storedSelection.endNodeIndex]
-      ) {
-        range.setStart(textNodes[storedSelection.startNodeIndex], storedSelection.startOffset);
-        range.setEnd(textNodes[storedSelection.endNodeIndex], storedSelection.endOffset);
-        selection.removeAllRanges();
-        selection.addRange(range);
-  
-        const rect = range.getBoundingClientRect();
-        const contentRect = contentContainer.getBoundingClientRect();
-        const topPosition = rect.bottom - contentRect.top + contentContainer.scrollTop;
-        const leftPosition = rect.left - contentRect.left + contentContainer.scrollLeft;
-  
-        sideBox.style.top = `${topPosition}px`;
-        sideBox.style.left = `${leftPosition}px`;
-      }
-    };
   
     
-  
+    useEffect(() => {
+      const handleScroll = () => {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+    
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const sideBox = document.getElementById("sideBox");
+    
+        if (sideBox) {
+          sideBox.style.top = `${rect.bottom + 5}px`;
+          sideBox.style.left = `${rect.left}px`;
+        }
+      };
+    
+      document.addEventListener("scroll", handleScroll, true); // Capture scroll in all containers
+    
+      return () => {
+        document.removeEventListener("scroll", handleScroll, true);
+      };
+    }, []);
 
   const sideBox = document.getElementById("sideBox");
   const handleMouseUp = (e) => {
@@ -114,16 +98,15 @@ export default function TextEditor() {
           // Get bounding rectangle of selection
           const rect = range.getBoundingClientRect();
 
-          // Calculate top and left relative to the content container (so it moves with scrolling)
-          const contentRect = contentContainer.getBoundingClientRect();
-          const topPosition = rect.bottom - contentRect.top + contentContainer.scrollTop; // Adjust for scrolling
-          const leftPosition = rect.left - contentRect.left + contentContainer.scrollLeft;
+          // // Calculate top and left relative to the content container (so it moves with scrolling)
+          // const contentRect = contentContainer.getBoundingClientRect();
+          // const topPosition = rect.bottom - contentRect.top + contentContainer.scrollTop; // Adjust for scrolling
+          // const leftPosition = rect.left - contentRect.left + contentContainer.scrollLeft;
       
-          // Set new position
-          sideBox.style.position = "absolute";  // Change from 'sticky' to 'absolute'
-          sideBox.style.top = `${topPosition}px`;
-          sideBox.style.left = `${leftPosition}px`;
-          sideBox.style.display = 'flex'; // Show the sideBox
+          sideBox.style.position = "fixed"; // Fixed to viewport
+          sideBox.style.top = `${rect.bottom + 5}px`; // 5px below selection
+          sideBox.style.left = `${rect.left}px`; // Align to selection start
+          sideBox.style.display = 'flex'; // Show sideBox
 
           // Save selection data
           const startNodeIndex = textNodes.findIndex((node) => node === range.startContainer);
@@ -457,7 +440,7 @@ export default function TextEditor() {
       </dialog>
 
       <div onClick={(e) => handleDocumentClick(e)} className='w-full flex flex-row'>
-        <div style={{ display: "none" }} id='sideBox' className=' z-[3] items-center justify-between px-2  sticky h-10  flex-row gap-2 rounded-full shadow-2xl border border-slate-500 shadow-slate-500 w-28 bg-white'>
+        <div style={{ display: "none" }} id='sideBox' className=' z-[2] items-center justify-between px-2  h-10  flex-row gap-2 rounded-full shadow-2xl border border-slate-500 shadow-slate-500 w-28 bg-white'>
           <BiCommentAdd onClick={() => {
             applyTempHighlights()
             document.getElementById('my_modal_1').showModal()

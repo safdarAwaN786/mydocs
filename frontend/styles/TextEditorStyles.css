@@ -28,3 +28,6 @@
 .jodit-toolbar__box:not(:empty):not(:empty) {
     background-color: #fafafa !important;
 }
+#sideBox {
+  transform: translateZ(0) !important; /* Creates a new stacking context */
+}

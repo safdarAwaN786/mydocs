@@ -17,7 +17,7 @@ export default function EditorHeader() {
 
   return (
     <>
-      <div className='w-full z-10 p-2 h-16 shadow-sm fixed top-0 left-0 shadow-gray-200 items-center text-xl font-medium flex-row sm:px-5 flex justify-between '>
+      <div className='w-full  p-2 h-16 shadow-sm z-[100] fixed top-0 left-0 shadow-gray-200 items-center text-xl font-medium flex-row sm:px-5 flex justify-between '>
         <div className='flex gap-3 items-center'>
           <Link href="/docs">
             <SiGoogledocs className='text-blue-500 text-4xl' />

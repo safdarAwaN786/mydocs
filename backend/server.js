@@ -28,7 +28,9 @@ app.use("/api", docRoutes);
 // MongoDB Connection
 const connectToDatabase = async () => {
   try {
-    await mongoose.connect("mongodb://localhost:27017/mydocs");
+    // await mongoose.connect("mongodb://localhost:27017/mydocs");
+
+    await mongoose.connect("mongodb+srv://safdarstudent:bRrdx2h2Yg2B3fbq@cluster0.tvqbbr3.mongodb.net/mydocs");
     console.log("📦 MongoDB Connected successfully!");
   } catch (error) {
     console.error("❌ MongoDB Connection failed:", error);
