@@ -38,7 +38,6 @@ export default function TextEditor() {
       }
       setContentToShow(data.content)
       setDocData(data);
-      setDocDataState(data.content);
     },
     onError: () => {
       router.replace("/docs");
@@ -46,6 +45,8 @@ export default function TextEditor() {
   });
 
   useEffect(() => {
+    const contentContainer = document.getElementById("content-container");
+    contentContainer.addEventListener("scroll", handleScroll);
     if (!docData) {
       mutate(params.docId);
     } else {
@@ -55,8 +56,45 @@ export default function TextEditor() {
     return () => websocketService.disconnect();
   }, []);
 
-  const sideBox = document.getElementById("sideBox");
 
+  
+    const handleScroll = () => {
+      const storedSelection = JSON.parse(localStorage.getItem('commentFor'));
+      if (!storedSelection) return;
+      const contentContainer = document.getElementById("content-container");
+  
+      const container = document.getElementsByClassName('jodit-wysiwyg')[0];
+      const textNodes = getTextNodes(container);
+      const sideBox = document.getElementById('sideBox');
+  
+      const range = document.createRange();
+      const selection = window.getSelection();
+  
+      if (
+        storedSelection.startNodeIndex >= 0 &&
+        storedSelection.endNodeIndex >= 0 &&
+        textNodes[storedSelection.startNodeIndex] &&
+        textNodes[storedSelection.endNodeIndex]
+      ) {
+        range.setStart(textNodes[storedSelection.startNodeIndex], storedSelection.startOffset);
+        range.setEnd(textNodes[storedSelection.endNodeIndex], storedSelection.endOffset);
+        selection.removeAllRanges();
+        selection.addRange(range);
+  
+        const rect = range.getBoundingClientRect();
+        const contentRect = contentContainer.getBoundingClientRect();
+        const topPosition = rect.bottom - contentRect.top + contentContainer.scrollTop;
+        const leftPosition = rect.left - contentRect.left + contentContainer.scrollLeft;
+  
+        sideBox.style.top = `${topPosition}px`;
+        sideBox.style.left = `${leftPosition}px`;
+      }
+    };
+  
+    
+  
+
+  const sideBox = document.getElementById("sideBox");
   const handleMouseUp = (e) => {
     console.log('Selection made');
 
@@ -80,7 +118,7 @@ export default function TextEditor() {
           const contentRect = contentContainer.getBoundingClientRect();
           const topPosition = rect.bottom - contentRect.top + contentContainer.scrollTop; // Adjust for scrolling
           const leftPosition = rect.left - contentRect.left + contentContainer.scrollLeft;
-
+      
           // Set new position
           sideBox.style.position = "absolute";  // Change from 'sticky' to 'absolute'
           sideBox.style.top = `${topPosition}px`;
@@ -101,11 +139,9 @@ export default function TextEditor() {
             endNodeIndex
           };
           localStorage.setItem('commentFor', JSON.stringify(data));
-          if(selectedComment){
+          if (selectedComment) {
             setSelectedComment(null)
-            setTimeout(()=> applyTempHighlights(), 300)
-          } else {
-            applyTempHighlights()
+            setTimeout(() => applyTempHighlights(), 300)
           }
         }
       } else {
@@ -125,8 +161,8 @@ export default function TextEditor() {
 
 
   const applyTempHighlights = () => {
-  
-    
+
+
     const container = document.getElementsByClassName('jodit-wysiwyg')[0];
     const highlight = JSON.parse(localStorage.getItem('commentFor'));
     if (!container || !highlight) return;
@@ -360,7 +396,7 @@ export default function TextEditor() {
   useEffect(() => {
     if (docData) {
       setContentToShow(docData.content)
-      if(docData.comments?.length === 0){
+      if (docData.comments?.length === 0) {
         setShowCommentsBox(false)
       }
       setLoading(false)
@@ -383,6 +419,9 @@ export default function TextEditor() {
     updatedReplies[replyIndex] = { ...updatedReplies[replyIndex], reply }
     setTempReplies(updatedReplies)
   }
+
+ 
+
 
   if (isLoading || loading) return <Loading />;
 
@@ -420,6 +459,7 @@ export default function TextEditor() {
       <div onClick={(e) => handleDocumentClick(e)} className='w-full flex flex-row'>
         <div style={{ display: "none" }} id='sideBox' className=' z-[3] items-center justify-between px-2  sticky h-10  flex-row gap-2 rounded-full shadow-2xl border border-slate-500 shadow-slate-500 w-28 bg-white'>
           <BiCommentAdd onClick={() => {
+            applyTempHighlights()
             document.getElementById('my_modal_1').showModal()
             sideBox.style.display = 'none';
           }} className=' text-2xl text-blue-600 cursor-pointer' />
@@ -430,7 +470,7 @@ export default function TextEditor() {
           <JoditEditor
             ref={editor} // ✅ Assign the ref
             config={{ placeholder: "" }} // ✅ Remove placeholder
-            value={contentToShow}
+            value={contentToShow || ""}
             onBlur={(newContent) => { // ✅ Use onBlur instead of onChange
               if (newContent === contentToShow) return;
               setContentToShow(newContent);
@@ -446,12 +486,12 @@ export default function TextEditor() {
         {showCommentsBox &&
           <div className=' w-[28%] mx-2 mt-[2px] overflow-y-scroll max-h-[90vh] bg-[#e9e9e9] p-2 rounded-lg'>
             <div className='flex flex-row justify-between items-center'>
-            <h2 className='font-semibold'>All Comments</h2>
-            <button onClick={() => {
+              <h2 className='font-semibold'>All Comments</h2>
+              <button onClick={() => {
                 setShowCommentsBox(false)
               }} className=" p-1 bg-slate-200 rounded-full"><IoClose className='text-gray-600 text-2xl' /></button>
             </div>
-              {docData?.comments?.length === 0 && <div className='w-full h-[80%] flex justify-center items-center'> <p className='text-center text-gray-500'>No comments yet</p></div>}
+            {docData?.comments?.length === 0 && <div className='w-full h-[80%] flex justify-center items-center'> <p className='text-center text-gray-500'>No comments yet</p></div>}
             <div id='commentsBox' className='cursor-pointer' >
               {docData?.comments?.filter(com => com.resolved === false)?.map((comment, key) => {
                 const commentReply = tempReplies.find(reply => reply.forComment === comment.commentNumber)
@@ -479,11 +519,11 @@ export default function TextEditor() {
                             <span className='font-semibild text-gray-500 text-sm mt-[-4px]'>{dayjs(comment.commentDate).format("HH:MM DD MMM")}</span>
                           </div>
                         </div>
-                        
-                          <div onClick={() => handleCommentCheck(comment.commentNumber)} className={`p-1 cursor-pointer comment-check h-8 w-8  flex justify-center items-center rounded-full hover:bg-gray-300`}>
-                            <GiCheckMark className=' text-lg text-blue-600 ' />
-                          </div>
-                        
+
+                        <div onClick={() => handleCommentCheck(comment.commentNumber)} className={`p-1 cursor-pointer comment-check h-8 w-8  flex justify-center items-center rounded-full hover:bg-gray-300`}>
+                          <GiCheckMark className=' text-lg text-blue-600 ' />
+                        </div>
+
                       </div>
                       <p className=' text-black text-lg ms-2 mt-1'>{comment.comment}</p>
                     </div>
@@ -522,68 +562,68 @@ export default function TextEditor() {
                 )
               })}
               <div >
-              <h1 className='text-md'>Resolved Comments</h1>
-              {docData?.comments?.filter(com => com.resolved === true)?.map((comment, key) => {
-                const commentReply = tempReplies.find(reply => reply.forComment === comment.commentNumber)
-                return (
-                  <div key={key} onClick={(e) => handleCommentClick(e, comment.commentNumber)} className={` w-full ${selectedComment === comment.commentNumber ? "border border-gray-500 bg-white  shadow-xl" : "bg-gray-300"} rounded-lg  p-2 my-2`}>
+                <h1 className='text-md'>Resolved Comments</h1>
+                {docData?.comments?.filter(com => com.resolved === true)?.map((comment, key) => {
+                  const commentReply = tempReplies.find(reply => reply.forComment === comment.commentNumber)
+                  return (
+                    <div key={key} onClick={(e) => handleCommentClick(e, comment.commentNumber)} className={` w-full ${selectedComment === comment.commentNumber ? "border border-gray-500 bg-white  shadow-xl" : "bg-gray-300"} rounded-lg  p-2 my-2`}>
 
-                    <div className=' mb-3'>
-                      <div className=' flex flex-row justify-between '>
-                        <div className='flex flex-row gap-2 items-center'>
-                          <span className="h-8 w-8 rounded-full">
-                            <MdAccountCircle className=' text-3xl ' />
-                          </span>
-                          <div className='flex flex-col gap-0'>
-                            <span className='font-semibold text-md text-gray-700'>{comment.commentBy}</span>
-                            <span className='font-semibild text-gray-500 text-sm mt-[-4px]'>{dayjs(comment.commentDate).format("HH:MM DD MMM")}</span>
+                      <div className=' mb-3'>
+                        <div className=' flex flex-row justify-between '>
+                          <div className='flex flex-row gap-2 items-center'>
+                            <span className="h-8 w-8 rounded-full">
+                              <MdAccountCircle className=' text-3xl ' />
+                            </span>
+                            <div className='flex flex-col gap-0'>
+                              <span className='font-semibold text-md text-gray-700'>{comment.commentBy}</span>
+                              <span className='font-semibild text-gray-500 text-sm mt-[-4px]'>{dayjs(comment.commentDate).format("HH:MM DD MMM")}</span>
+                            </div>
                           </div>
-                        </div>
-                        
+
                           {/* <div onClick={() => handleCommentCheck(comment.commentNumber)} className={`p-1 cursor-pointer comment-check h-8 w-8  flex justify-center items-center rounded-full hover:bg-gray-300`}>
                             <GiCheckMark className=' text-lg text-blue-600 ' />
                           </div> */}
-                        
-                      </div>
-                      <p className=' text-black text-lg ms-2 mt-1'>{comment.comment}</p>
-                    </div>
-                    {comment.replies?.map((reply, index) =>
 
-                      <div key={`${comment.commentNumber}-reply-${index}`} className=' mb-4 ms-4'>
-                        <div className='flex flex-row gap-2 items-center'>
-                          <span className="h-8 w-8 rounded-full">
-                            <MdAccountCircle className=' text-3xl ' />
-
-                          </span>
-                          <div className='flex flex-col gap-0'>
-                            <span className='font-semibold text-lg text-gray-700'>{reply.replyBy}</span>
-                            <span className='font-semibild text-gray-500 text-sm mt-[-4px]'>{dayjs(reply.replyDate).format("HH:mm DD MMM")}</span>
-                          </div>
                         </div>
-                        <p className=' text-black text-lg ms-2 mt-1'>{reply.reply}</p>
+                        <p className=' text-black text-lg ms-2 mt-1'>{comment.comment}</p>
                       </div>
+                      {comment.replies?.map((reply, index) =>
 
-                    )}
+                        <div key={`${comment.commentNumber}-reply-${index}`} className=' mb-4 ms-4'>
+                          <div className='flex flex-row gap-2 items-center'>
+                            <span className="h-8 w-8 rounded-full">
+                              <MdAccountCircle className=' text-3xl ' />
 
-                    {(selectedComment === comment.commentNumber || commentReply?.reply?.length > 0) && (
-                      <form onSubmit={(e) => handleReplySubmit(e, comment.commentNumber)}>
-                        <input value={commentReply?.reply} onChange={(e) => updateReply(comment.commentNumber, e.target.value)} placeholder='Reply' className='bg-white text-black-2 px-3 py-1 focus:outline-none w-[100%] rounded-full border border-gray-700' required />
-                        {commentReply?.reply?.length > 0 && (
-                          <div className='flex-row justify-end w-full flex mt-1'>
-                            <button type='submit'
-                              className={`inline-flex cursor-pointer h-6 w-8 items-center justify-center rounded-full bg-blue-600 px-10 py-4 my-1 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10`}
-                            >Reply
-                            </button>
+                            </span>
+                            <div className='flex flex-col gap-0'>
+                              <span className='font-semibold text-lg text-gray-700'>{reply.replyBy}</span>
+                              <span className='font-semibild text-gray-500 text-sm mt-[-4px]'>{dayjs(reply.replyDate).format("HH:mm DD MMM")}</span>
+                            </div>
                           </div>
-                        )}
-                      </form>
-                    )}
-                  </div>
-                )
-              })}
+                          <p className=' text-black text-lg ms-2 mt-1'>{reply.reply}</p>
+                        </div>
+
+                      )}
+
+                      {(selectedComment === comment.commentNumber || commentReply?.reply?.length > 0) && (
+                        <form onSubmit={(e) => handleReplySubmit(e, comment.commentNumber)}>
+                          <input value={commentReply?.reply} onChange={(e) => updateReply(comment.commentNumber, e.target.value)} placeholder='Reply' className='bg-white text-black-2 px-3 py-1 focus:outline-none w-[100%] rounded-full border border-gray-700' required />
+                          {commentReply?.reply?.length > 0 && (
+                            <div className='flex-row justify-end w-full flex mt-1'>
+                              <button type='submit'
+                                className={`inline-flex cursor-pointer h-6 w-8 items-center justify-center rounded-full bg-blue-600 px-10 py-4 my-1 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10`}
+                              >Reply
+                              </button>
+                            </div>
+                          )}
+                        </form>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-            </div>
-            
+
           </div>}
 
       </div>
