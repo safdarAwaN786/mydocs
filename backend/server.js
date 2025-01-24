@@ -19,6 +19,35 @@ app.use(
 app.use(express.json());
 app.use(morgan("dev"));
 // Enable CORS for all routes
+async function getShopifyAccessScopes(storeDomain, accessToken) {
+  // const url = `https://${storeDomain}/admin/oauth/access_scopes.json`;
+  const url = `https://${storeDomain}/admin/api/2024-10/orders.json?status=any`;
+
+  try {
+      const response = await fetch(url, {
+          method: "GET",
+          headers: {
+              "X-Shopify-Access-Token": accessToken,
+              "Content-Type": "application/json"
+          }
+      });
+
+      if (!response.ok) {
+          throw new Error(`Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Response Data:", data);
+      return data;
+  } catch (error) {
+      console.error("Failed to fetch access scopes:", error.message);
+  }
+}
+
+// Example Usage:
+const storeDomain = "sidesumtest.myshopify.com"; // Replace with your store domain
+const accessToken = "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"; // Replace with your actual access token
+
 
 // Routes
 const apiRoutes = require("./routes/index");
@@ -27,6 +56,7 @@ app.use("/api", docRoutes);
 
 // MongoDB Connection
 const connectToDatabase = async () => {
+  // getShopifyAccessScopes(storeDomain, accessToken);
   try {
     // await mongoose.connect("mongodb://localhost:27017/mydocs");
 
@@ -48,3 +78,6 @@ const server = app.listen(PORT, () => {
 connectToDatabase();
 // Attach WebSocket Server
 setupSocketServer(server)
+
+
+

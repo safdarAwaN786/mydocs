@@ -21,12 +21,13 @@ export default function Templates() {
         onError: (error) => {
             console.error("Error creating document:", error);
         },
-    });
-    console.log(isPending)
-    if (newDocCreating) return <Loading />;
+    })
 
     return (
         <>
+        {newDocCreating && (
+            <Loading />
+        )}
             <div className="d-flex flex-row bg-slate-100 py-12 px-[300px]">
                 <div onClick={() => {
                     mutate()

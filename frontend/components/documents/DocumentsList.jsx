@@ -17,13 +17,12 @@ export default function DocumentsList() {
     queryKey: ['docs'],
     queryFn: fetchAllDocuments,
   })
-  console.log(data);
-
-
-  if (isLoading || loading) return <Loading />;
 
   return (
     <>
+    {(isLoading || loading) && (
+      <Loading />
+    )}
       <div className="d-flex flex-col bg-white py-12 px-[300px]">
         <div className="overflow-x-auto">
           <table className="table">

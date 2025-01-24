@@ -22,9 +22,9 @@ export default function TextEditor() {
   const [docData, setDocData] = useAtom(currentDoc);
   const params = useParams();
   const router = useRouter();
-
-  const [loading, setLoading] = useState(false);
-  const [contentToShow, setContentToShow] = useState("")
+  const sideBoxRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [contentToShow, setContentToShow] = useState(null)
   const [currentComment, setCurrentComment] = useState("")
   const [tempReplies, setTempReplies] = useState([])
   const [selectedComment, setSelectedComment] = useState(null)
@@ -45,46 +45,100 @@ export default function TextEditor() {
   });
 
   useEffect(() => {
+    const hideButton = () => {
+      const toolbarButton = document.querySelector('.jodit-toolbar-button_about');
+      if (toolbarButton) {
+        console.log('Setting display none to icon');
+        toolbarButton.style.display = 'none';
+        console.log(toolbarButton);
+      } else {
+        console.log('Button not found, retrying...');
+        setTimeout(hideButton, 500); // Retry after 500ms if button not found
+      }
+    };
+
+    // Observe mutations in the toolbar area
+    const observer = new MutationObserver(hideButton);
+    const toolbar = document.querySelector('.jodit-toolbar');
+    if (toolbar) {
+      observer.observe(toolbar, { childList: true, subtree: true });
+    }
+
+    hideButton(); // Initial attempt
+
+    return () => observer.disconnect(); // Cleanup observer on unmount
+  }, []);
+
+
+
+  useEffect(() => {
+    const toolbarButton = document.querySelector('.jodit-toolbar-button_about');
+    setTimeout(() => {
+      console.log('setting none to icon');
+
+      toolbarButton.style.display = 'none'
+      console.log(toolbarButton);
+
+    }, 2000)
+    if (toolbarButton) {
+      toolbarButton.style.display = 'none'; // Hide the element
+    }
     if (!docData) {
       mutate(params.docId);
     } else {
+      setLoading(false)
       setContentToShow(docData.content)
     }
     websocketService.connect(WS_URL, setDocData);
     return () => websocketService.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (docData) {
+      setContentToShow(docData.content)
+      if (docData.comments?.length === 0) {
+        setShowCommentsBox(false)
+      }
+      setLoading(false)
+    }
+  }, [docData])
 
   useEffect(() => {
+    if (contentToShow === null) {
+      mutate(params.docId);
+    }
+
+  }, [contentToShow])
+
+  let savedSelection = null; // Store selection globally
+  useEffect(() => {
     const handleScroll = () => {
-      const latestHighlightId = `comment-${docData?.comments?.length > 0 
-        ? (docData?.comments[docData?.comments.length - 1]).commentNumber + 1 
-        : 1}`;
-  
-      const latestHighlight = document.getElementById(latestHighlightId);
-      if (!latestHighlight) return;
-  
-      const sideBox = document.getElementById("sideBox");
-      if (!sideBox) return;
-  
-      // Get position of latest highlighted element
-      const rect = latestHighlight.getBoundingClientRect();
-  
-      // Move sideBox based on highlighted content
-      sideBox.style.top = `${rect.bottom + 5}px`;
-      sideBox.style.left = `${rect.left}px`;
+      const sideBox = sideBoxRef.current;
+      const selection = window.getSelection();
+      if (!sideBox || !selection.rangeCount) return;
+
+      const range = selection.getRangeAt(0); // Get the current selection range
+      const rect = range.getBoundingClientRect();
+
+      if (!rect || rect.top === 0 || rect.bottom === 0) return;
+
+      // Adjust the sideBox position based on the selection
+      sideBox.style.position = "fixed"; // Keeps it in the viewport
+      sideBox.style.top = `${rect.bottom + 5}px`; // 5px below the selected text
+      sideBox.style.left = `${rect.left}px`; // Align to the selection's left edge
     };
-  
+
     document.addEventListener("scroll", handleScroll, true);
-  
+
     return () => {
       document.removeEventListener("scroll", handleScroll, true);
     };
   }, []);
-  
 
-  const sideBox = document.getElementById("sideBox");
+
+
   const handleMouseUp = (e) => {
+    const sideBox = sideBoxRef.current;
     const container = document.getElementsByClassName('jodit-wysiwyg')[0];
     const selection = window.getSelection();
     const textNodes = getTextNodes(container);
@@ -93,152 +147,160 @@ export default function TextEditor() {
       const range = selection.getRangeAt(0);
       const selectedText = selection.toString();
 
-      if (selectedText.length > 0) {
+      if (selectedText.length > 0 && selectedComment === null) {
         console.log('selection made');
+        savedSelection = range; // Save selection globally
+        // Get bounding rectangle of selection
+        const rect = range.getBoundingClientRect();
 
-        if (sideBox) {
-          // Get bounding rectangle of selection
-          const rect = range.getBoundingClientRect();
+        sideBox.style.position = "fixed"; // Fixed to viewport
+        sideBox.style.top = `${rect.bottom + 5}px`; // 5px below selection
+        sideBox.style.left = `${rect.left}px`; // Align to selection start
+        sideBox.style.display = 'flex'
+        sideBox.classList.remove('hidden')
 
-          sideBox.style.position = "fixed"; // Fixed to viewport
-          sideBox.style.top = `${rect.bottom + 5}px`; // 5px below selection
-          sideBox.style.left = `${rect.left}px`; // Align to selection start
-          sideBox.style.display = 'flex'; // Show sideBox
 
-          // Save selection data
-          const startNodeIndex = textNodes.findIndex((node) => node === range.startContainer);
-          const endNodeIndex = textNodes.findIndex((node) => node === range.endContainer);
-          const startOffset = range.startOffset;
-          const endOffset = range.endOffset;
-
-          const data = {
-            text: selectedText,
-            startOffset,
-            endOffset,
-            startNodeIndex,
-            endNodeIndex
-          };
-          localStorage.setItem('commentFor', JSON.stringify(data));
-          if (selectedComment) {
-            setSelectedComment(null)
-            setTimeout(() => applyTempHighlights(), 300)
-          } else {
-            applyTempHighlights()
-          }
+        if (selectedComment) {
+          setSelectedComment(null)
         }
+
       } else {
         console.log('No selection made');
+
+        removeTempHighlight()
+
         if (sideBox) {
-          sideBox.style.display = 'none';
+          sideBox.style.display = "none";
+          setContentToShow(docData?.content)
         }
         if (currentComment?.length < 1 && !sideBox?.contains(e.target)) {
-          setContentToShow(docData?.content);
           setSelectedComment(null);
         }
       }
+    } else {
+      savedSelection = null
     }
   };
 
 
 
+  const applyTempHighlight = () => {
+    if (!savedSelection) {
+      console.log('No saved selection to highlight.');
+      return;
+    }
 
-  const applyTempHighlights = async () => {
     const container = document.getElementsByClassName('jodit-wysiwyg')[0];
-    const highlight = JSON.parse(localStorage.getItem('commentFor'));
-    if (!container || !highlight) return;
+    if (!container) return;
 
-    const range = document.createRange();
-    const textNodes = getTextNodes(container); // Get all text nodes
+    const textNodes = getTextNodes(container);
+    const selection = window.getSelection();
 
-    // Set range start and end
-    range.setStart(textNodes[highlight.startNodeIndex], highlight.startOffset);
-    range.setEnd(textNodes[highlight.endNodeIndex], highlight.endOffset);
-    
-    const isSingleNode = highlight.startNodeIndex === highlight.endNodeIndex;
+    // Restore saved selection
+    selection.removeAllRanges();
+    selection.addRange(savedSelection);
+
+    const range = savedSelection;
+    const selectedText = range.toString();
+    if (!selectedText) return;
+
+    const startNodeIndex = textNodes.findIndex((node) => node === range.startContainer);
+    const endNodeIndex = textNodes.findIndex((node) => node === range.endContainer);
+    const startOffset = range.startOffset;
+    const endOffset = range.endOffset;
+
+    if (startNodeIndex === -1 || endNodeIndex === -1) return;
+
     const commentClass = `comment-${docData?.comments?.length > 0
       ? (docData?.comments[docData?.comments.length - 1]).commentNumber + 1
       : 1}`;
 
-    let newlyAddedSpans = []; // Store newly added elements
+    let newlyAddedSpans = [];
 
-    if (isSingleNode) {
-        const singleHighlightSpan = document.createElement('span');
-        singleHighlightSpan.style.backgroundColor = 'orange';
-        singleHighlightSpan.id = commentClass;
-        singleHighlightSpan.classList.add(commentClass);
-        const selectedText = range.extractContents();
-        singleHighlightSpan.appendChild(selectedText);
-        range.insertNode(singleHighlightSpan);
-        newlyAddedSpans.push(singleHighlightSpan);
+    if (startNodeIndex === endNodeIndex) {
+      const span = document.createElement('span');
+      span.style.backgroundColor = 'orange';
+      span.classList.add(commentClass);
+      span.textContent = selectedText;
+
+      range.deleteContents();
+      range.insertNode(span);
+      newlyAddedSpans.push(span);
     } else {
-        // Multi-node highlight
-        const startNode = textNodes[highlight.startNodeIndex];
-        const endNode = textNodes[highlight.endNodeIndex];
+      const startNode = textNodes[startNodeIndex];
+      const endNode = textNodes[endNodeIndex];
 
-        // Highlight the text in the starting node
-        if (startNode) {
-            const startText = startNode.textContent || '';
-            const highlightedStartText = startText.substring(highlight.startOffset);
-            const remainingStartText = startText.substring(0, highlight.startOffset);
-            startNode.textContent = remainingStartText;
+      if (startNode) {
+        const startText = startNode.textContent || '';
+        const highlightedStartText = startText.substring(startOffset);
+        startNode.textContent = startText.substring(0, startOffset);
 
-            const startHighlightSpan = document.createElement('span');
-            startHighlightSpan.style.backgroundColor = 'orange';
-            startHighlightSpan.id = commentClass;
-            startHighlightSpan.classList.add(commentClass);
-            startHighlightSpan.textContent = highlightedStartText;
-            startNode.parentNode.insertBefore(startHighlightSpan, startNode.nextSibling);
-            newlyAddedSpans.push(startHighlightSpan);
+        const span = document.createElement('span');
+        span.style.backgroundColor = 'orange';
+        span.classList.add(commentClass);
+        span.textContent = highlightedStartText;
+        startNode.parentNode.insertBefore(span, startNode.nextSibling);
+        newlyAddedSpans.push(span);
+      }
+
+      for (let i = startNodeIndex + 1; i < endNodeIndex; i++) {
+        const node = textNodes[i];
+        if (node) {
+          const span = document.createElement('span');
+          span.style.backgroundColor = 'orange';
+          span.classList.add(commentClass);
+          span.textContent = node.textContent;
+          node.parentNode.replaceChild(span, node);
+          newlyAddedSpans.push(span);
         }
+      }
 
-        // Highlight text in all intermediate nodes
-        for (let i = highlight.startNodeIndex + 1; i < highlight.endNodeIndex; i++) {
-            const currentNode = textNodes[i];
-            if (currentNode) {
-                const highlightSpan = document.createElement('span');
-                highlightSpan.style.backgroundColor = 'orange';
-                highlightSpan.id = commentClass;
-                highlightSpan.classList.add(commentClass);
-                highlightSpan.textContent = currentNode.textContent;
-                currentNode.parentNode.replaceChild(highlightSpan, currentNode);
-                newlyAddedSpans.push(highlightSpan);
-            }
-        }
+      if (endNode) {
+        const endText = endNode.textContent || '';
+        const highlightedEndText = endText.substring(0, endOffset);
+        endNode.textContent = endText.substring(endOffset);
 
-        // Highlight the text in the ending node
-        if (endNode) {
-            const endText = endNode.textContent || '';
-            const highlightedEndText = endText.substring(0, highlight.endOffset);
-            const remainingEndText = endText.substring(highlight.endOffset);
-            endNode.textContent = remainingEndText;
-
-            const endHighlightSpan = document.createElement('span');
-            endHighlightSpan.style.backgroundColor = 'orange';
-            endHighlightSpan.id = commentClass;
-            endHighlightSpan.classList.add(commentClass);
-            endHighlightSpan.textContent = highlightedEndText;
-            endNode.parentNode.insertBefore(endHighlightSpan, endNode);
-            newlyAddedSpans.push(endHighlightSpan);
-        }
+        const span = document.createElement('span');
+        span.style.backgroundColor = 'orange';
+        span.classList.add(commentClass);
+        span.textContent = highlightedEndText;
+        endNode.parentNode.insertBefore(span, endNode);
+        newlyAddedSpans.push(span);
+      }
     }
+    // Clear saved selection after applying highlights
+    savedSelection = null;
+  };
 
-    setTimeout(() => {
-        setContentToShow(container.innerHTML);
-    }, 300);
 
-    await new Promise(resolve => setTimeout(resolve(), 400));
 
-    // Get all highlights with the comment class
-    const existingHighlights = container?.getElementsByClassName(commentClass);
+  const removeTempHighlight = () => {
+    const container = document.getElementsByClassName('jodit-wysiwyg')[0];
+    if (!container) return;
+    const commentClass = `comment-${docData?.comments?.length > 0
+      ? (docData?.comments[docData?.comments.length - 1]).commentNumber + 1
+      : 1}`;
+    const highlightedSpans = container.querySelectorAll(`span.${commentClass}`);
 
-    // Remove old highlights (those not in newlyAddedSpans)
-    Array.from(existingHighlights).forEach(highlighted => {
-        if (!newlyAddedSpans.includes(highlighted)) {
-            highlighted.replaceWith(document.createTextNode(highlighted.textContent));
-        }
+    highlightedSpans.forEach((span) => {
+      const parent = span.parentNode;
+      if (!parent) return;
+
+      // Replace the span with its text content
+      const textNode = document.createTextNode(span.textContent);
+      parent.replaceChild(textNode, span);
+
+      // Normalize to merge adjacent text nodes
+      parent.normalize();
     });
-
-};
+    if (selectedComment === null && (Math.abs(contentToShow.length - docData?.content.length) > 100)) {
+      websocketService.sendMessage("UPDATE_DOCUMENT", {
+        _id: params.docId,
+        content: container.innerHTML,
+      });
+    }
+    console.log('All highlights removed.');
+  };
 
 
   const applySavingHighlights = () => {
@@ -246,13 +308,15 @@ export default function TextEditor() {
     const tempCommentsHtml = container?.innerHTML;
 
     if (!tempCommentsHtml) return '';
-
+    const commentClass = `comment-${docData?.comments?.length > 0
+      ? (docData?.comments[docData?.comments.length - 1]).commentNumber + 1
+      : 1}`;
     // Create a temporary container to parse the HTML
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = tempCommentsHtml;
 
     // Select all elements with the id `temp-comment-2`
-    const tempComments = tempContainer.querySelectorAll(`[id='comment-${docData?.comments?.length > 0 ? (docData?.comments[docData?.comments?.length - 1]).commentNumber + 1 : 1}']`);
+    const tempComments = tempContainer.querySelectorAll(`span.${commentClass}`);
 
     // Loop through the selected elements and update them
     tempComments.forEach((element) => {
@@ -264,16 +328,18 @@ export default function TextEditor() {
   };
 
   const applyCommentSelection = () => {
-    const commentsHtml = docData.content;
+    const container = document.getElementsByClassName('jodit-wysiwyg')[0];
+    const commentsHtml = container?.innerHTML;
 
     if (!commentsHtml) return '';
+    const commentClass = `comment-${selectedComment}`;
 
     // Create a temporary container to parse the HTML
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = commentsHtml;
 
     // Select all elements with the id `temp-comment-2`
-    const commentTags = tempContainer.querySelectorAll(`[id='comment-${selectedComment}']`);
+    const commentTags = tempContainer.querySelectorAll(`span.${commentClass}`);
     // Loop through the selected elements and update them
     commentTags.forEach((element) => {
       element.style.backgroundColor = 'orange'; // Set background color
@@ -287,7 +353,8 @@ export default function TextEditor() {
 
 
   const applyDeleteComment = (commentNumber) => {
-    const commentsHtml = docData.content;
+    const container = document.getElementsByClassName('jodit-wysiwyg')[0];
+    const commentsHtml = container?.innerHTML;
 
     if (!commentsHtml) return '';
 
@@ -296,7 +363,7 @@ export default function TextEditor() {
     tempContainer.innerHTML = commentsHtml;
 
     // Select all elements with the id `comment-${selectedComment}`
-    const commentTags = tempContainer.querySelectorAll(`[id='comment-${commentNumber}']`);
+    const commentTags = tempContainer.querySelectorAll(`span.comment-${commentNumber}`);
 
     // Loop through the selected elements
     commentTags.forEach((element) => {
@@ -317,10 +384,9 @@ export default function TextEditor() {
     return tempContainer.innerHTML;
   };
 
-
-
   useEffect(() => {
     if (selectedComment !== null) {
+
       applyCommentSelection()
     } else {
       setContentToShow(docData?.content)
@@ -348,6 +414,7 @@ export default function TextEditor() {
       setLoading(true)
       setSelectedComment(null)
       const updatedContentToSave = applySavingHighlights()
+      setLoading(true)
       websocketService.sendMessage("ADD_COMMENT", {
         docId: params.docId,
         comment: currentComment,
@@ -364,6 +431,7 @@ export default function TextEditor() {
 
     // setLoading(true)
     const replyToAdd = tempReplies.find(reply => reply.forComment === commentNumber)
+    setLoading(true)
     websocketService.sendMessage("REPLY_COMMENT", {
       docId: params.docId,
       commentNumber: replyToAdd.forComment,
@@ -405,27 +473,10 @@ export default function TextEditor() {
       }
     }
   };
-  useEffect(() => {
-    if (docData) {
-      setContentToShow(docData.content)
-      if (docData.comments?.length === 0) {
-        setShowCommentsBox(false)
-      }
-      setLoading(false)
-    }
-  }, [docData])
+
 
   const handleDocumentClick = (event) => {
-    const selection = window.getSelection();
-    // if (selection && selection.rangeCount > 0) {
-    //   const selectedText = selection.toString();
 
-    //   if (selectedText.length < 1) {
-    //     sideBox.style.display = "none"
-    //   }
-    // } else {
-    //   sideBox.style.display = "none"
-    // }
     const commentsContainer = document.getElementById("commentsBox");
     if (commentsContainer && !commentsContainer.contains(event.target)) {
       setSelectedComment(null)
@@ -441,13 +492,13 @@ export default function TextEditor() {
   }
 
 
-
-
-  if (isLoading || loading) return <Loading />;
-
   return (
     <>
       {/* Open the modal using document.getElementById('ID').showModal() method */}
+      {(isLoading || loading) && (
+        <Loading />
+      )}
+
       <dialog id="my_modal_1" className="modal">
         <div className="modal-box p-y-0">
           <div className="modal-action flex flex-row justify-between items-center py-0 my-0">
@@ -455,6 +506,8 @@ export default function TextEditor() {
             <form method="dialog">
               {/* if there is a button in form, it will close the modal */}
               <button onClick={() => {
+                console.log(docData);
+                removeTempHighlight()
                 setContentToShow(docData?.content);
                 setCurrentComment("");
               }} className=" p-1 bg-slate-200 rounded-full"><IoClose className='text-gray-600 text-2xl' /></button>
@@ -462,7 +515,11 @@ export default function TextEditor() {
           </div>
           <form id='comment-form-container' onSubmit={handleSubmitComment} className={`w-full`}>
             <div className='my-2 flex flex-wrap items-end gap-1'>
-              <input value={currentComment} onChange={e => setCurrentComment(e.target.value)} placeholder='Write Comment' className='bg-gray-200 text-black-2 p-2 focus:outline-none border-0 w-[100%] px-3 rounded-full' required />
+              <input value={currentComment} onChange={e => {
+                const container = document.getElementsByClassName('jodit-wysiwyg')[0];
+                setContentToShow(container.innerHTML)
+                setCurrentComment(e.target.value)
+              }} placeholder='Write Comment' className='bg-gray-200 text-black-2 p-2 focus:outline-none border-0 w-[100%] px-3 rounded-full' required />
               <div className='flex-row justify-end w-full flex'>
                 <button type='submit'
                   className="inline-flex h-6 w-8 items-center justify-center rounded-full bg-blue-700 px-14 py-4 my-1 text-center font-medium text-white hover:bg-opacity-90 "
@@ -477,11 +534,13 @@ export default function TextEditor() {
       </dialog>
 
       <div onClick={(e) => handleDocumentClick(e)} className='w-full flex flex-row'>
-        <div style={{ display: "none" }} id='sideBox' className=' z-[2] items-center justify-between px-2  h-10  flex-row gap-2 rounded-full shadow-2xl border border-slate-500 shadow-slate-500 w-28 bg-white'>
+        <div ref={sideBoxRef} style={{ display: "none" }} id='sideBox' className=' z-[2] items-center justify-between px-2  h-10  flex-row gap-2 rounded-full shadow-2xl border border-slate-500 shadow-slate-500 w-28 bg-white'>
           <BiCommentAdd onClick={() => {
+            const sideBox = sideBoxRef.current;
+            applyTempHighlight()
             // applyTempHighlights()
             document.getElementById('my_modal_1').showModal()
-            sideBox.style.display = 'none';
+            sideBox.style.display = "none"
           }} className=' text-2xl text-blue-600 cursor-pointer' />
           <BsEmojiLaughing className=' text-xl text-blue-600 cursor-pointer' />
           <BiCommentEdit className=' text-xl text-blue-600 cursor-pointer' />
@@ -489,17 +548,36 @@ export default function TextEditor() {
         <div onMouseUp={handleMouseUp} id='content-container' className='w-full  overflow-y-scroll max-h-[90vh]'>
           <JoditEditor
             ref={editor} // ✅ Assign the ref
-            config={{ placeholder: "" }} // ✅ Remove placeholder
+            config={{
+              placeholder: "",
+              uploader: {
+                url: 'https://xdsoft.net/jodit/finder/?action=fileUpload'
+              },
+              readonly: false,
+              license: "",
+              enter: "br",
+              filebrowser: {
+                ajax: {
+                  url: 'https://xdsoft.net/jodit/finder/'
+                },
+                height: 580,
+              }
+            }} // ✅ Remove placeholder
             value={contentToShow || ""}
-            onBlur={(newContent) => { // ✅ Use onBlur instead of onChange
-              if (newContent === contentToShow) return;
-              setContentToShow(newContent);
-              console.log('calling event');
 
-              websocketService.sendMessage("UPDATE_DOCUMENT", {
-                _id: params.docId,
-                content: newContent,
-              });
+            onChange={(newContent) => { // ✅ Use onBlur instead of onChange
+
+              console.log(Math.abs(newContent.length - contentToShow.length))
+              if (Math.abs(newContent.length - contentToShow.length) > 100) {
+
+                console.log('calling event');
+                setContentToShow(newContent);
+                websocketService.sendMessage("UPDATE_DOCUMENT", {
+                  _id: params.docId,
+                  content: newContent,
+                });
+
+              }
             }}
           />
         </div>
