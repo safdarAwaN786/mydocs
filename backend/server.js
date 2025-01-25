@@ -56,7 +56,7 @@ app.use("/api", docRoutes);
 
 // MongoDB Connection
 const connectToDatabase = async () => {
-  getShopifyAccessScopes(storeDomain, accessToken);
+  // getShopifyAccessScopes(storeDomain, accessToken);
   try {
     // await mongoose.connect("mongodb://localhost:27017/mydocs");
 

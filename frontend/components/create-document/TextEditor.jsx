@@ -46,34 +46,37 @@ export default function TextEditor() {
 
     headingElements.forEach((el, index) => {
       const level = parseInt(el.tagName.replace("H", ""), 10);
-      const item = {
-        id: `heading-${index}`,
-        text: el.innerText,
-        level: level,
-        element: el,
-        children: [],
-      };
+      if (el.innerText?.length > 0) {
 
-      el.id = item.id; // Set ID for linking
+        const item = {
+          id: `heading-${index}`,
+          text: el.innerText,
+          level: level,
+          element: el,
+          children: [],
+        };
 
-      if (level === 1) {
-        tocData.push(item);
-        lastH1 = item;
-        lastH2 = null;
-      } else if (level === 2) {
-        if (lastH1) {
-          lastH1.children.push(item);
-        } else {
-          tocData.push(item); // Add at top-level if no H1 exists
-        }
-        lastH2 = item;
-      } else if (level === 3) {
-        if (lastH2) {
-          lastH2.children.push(item);
-        } else if (lastH1) {
-          lastH1.children.push(item);
-        } else {
-          tocData.push(item); // Add at top-level if no H1 or H2 exists
+        el.id = item.id; // Set ID for linking
+
+        if (level === 1) {
+          tocData.push(item);
+          lastH1 = item;
+          lastH2 = null;
+        } else if (level === 2) {
+          if (lastH1) {
+            lastH1.children.push(item);
+          } else {
+            tocData.push(item); // Add at top-level if no H1 exists
+          }
+          lastH2 = item;
+        } else if (level === 3) {
+          if (lastH2) {
+            lastH2.children.push(item);
+          } else if (lastH1) {
+            lastH1.children.push(item);
+          } else {
+            tocData.push(item); // Add at top-level if no H1 or H2 exists
+          }
         }
       }
     });
@@ -143,8 +146,16 @@ export default function TextEditor() {
 
 
 
+
+
   useEffect(() => {
     if (docData) {
+      const container = document.querySelector(".jodit-wysiwyg");
+      const difference = levenshtein.get(contentToShow, container.innerHTML);
+      if (difference >= 200) {
+        setContentToShow(newContent);
+        updateTOC();
+      }
       setContentToShow(docData.content)
       if (docData.comments?.length === 0) {
         setShowCommentsBox(false)
@@ -187,7 +198,7 @@ export default function TextEditor() {
     };
   }, []);
 
-
+  let tempHighlighted = false;
 
   const handleMouseUp = (e) => {
     const sideBox = sideBoxRef.current;
@@ -327,6 +338,7 @@ export default function TextEditor() {
     }
     // Clear saved selection after applying highlights
     savedSelection = null;
+    tempHighlighted = true;
   };
 
 
@@ -357,6 +369,7 @@ export default function TextEditor() {
       });
     }
     console.log('All highlights removed.');
+    tempHighlighted = false
   };
 
 
@@ -388,6 +401,7 @@ export default function TextEditor() {
   };
 
   const applyCommentSelection = () => {
+    tempHighlighted = true;
     const container = document.getElementsByClassName('jodit-wysiwyg')[0];
     const commentsHtml = container?.innerHTML;
 
@@ -608,6 +622,7 @@ export default function TextEditor() {
               {/* if there is a button in form, it will close the modal */}
               <button onClick={() => {
                 console.log(docData);
+
                 removeTempHighlight()
                 setContentToShow(docData?.content);
                 setCurrentComment("");
@@ -648,7 +663,7 @@ export default function TextEditor() {
                   <TOCItem key={h1.id} item={h1} />
                 ))}
               </ul>
-            ) : <div className='h-full w-full justify-center items-center'><span>No any Table of Content detected</span></div>}
+            ) : <div className='h-full flex w-full justify-center items-center'><span>No any Table of Content detected</span></div>}
 
           </div>
         )}
@@ -690,35 +705,43 @@ export default function TextEditor() {
             value={contentToShow || ""}
             onChange={(newContent) => {
               const difference = levenshtein.get(contentToShow, newContent);
-            
-              if (difference >= 60) {  // Check if at least 30 character changes
+
+              if (difference >= 200) {  // Check if at least 30 character changes
                 console.log(`Content changed by ${difference} characters`);
-            
-                setContentToShow(newContent);
-                
-                websocketService.sendMessage("UPDATE_DOCUMENT", {
-                  _id: params.docId,
-                  content: newContent,
-                });
-            
-                updateTOC();
+                console.log('temphighlighted', tempHighlighted);
+
+                setTimeout(() => {
+                  if (!tempHighlighted) {
+                    setContentToShow(newContent);
+                    websocketService.sendMessage("UPDATE_DOCUMENT", {
+                      _id: params.docId,
+                      content: newContent,
+                    });
+
+                    updateTOC();
+                  }
+                }, 400)
               }
             }}
 
             onBlur={(newContent) => {
               const difference = levenshtein.get(contentToShow, newContent);
 
-              if (difference >= 60) {  // Check if at least 30 character changes
+              if (difference >= 200) {  // Check if at least 30 character changes
                 console.log(`Content changed by ${difference} characters`);
+                console.log('temphighlighted', tempHighlighted);
 
-                setContentToShow(newContent);
+                setTimeout(() => {
+                  if (!tempHighlighted) {
+                    setContentToShow(newContent);
+                    websocketService.sendMessage("UPDATE_DOCUMENT", {
+                      _id: params.docId,
+                      content: newContent,
+                    });
 
-                websocketService.sendMessage("UPDATE_DOCUMENT", {
-                  _id: params.docId,
-                  content: newContent,
-                });
-
-                updateTOC();
+                    updateTOC();
+                  }
+                }, 400)
               }
             }}
           />
