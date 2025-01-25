@@ -726,7 +726,7 @@ export default function TextEditor() {
         {showCommentsBox &&
           <div className=' w-[28%] mx-2 mt-[2px] overflow-y-scroll max-h-[90vh] bg-[#e9e9e9] p-2 rounded-lg'>
             <div className='flex flex-row justify-between items-center'>
-              <h2 className='font-semibold'>All Comments</h2>
+              <p className='font-semibold'>All Comments</p>
               <button onClick={() => {
                 setShowCommentsBox(false)
               }} className=" p-1 bg-slate-200 rounded-full"><IoClose className='text-gray-600 text-2xl' /></button>
@@ -793,7 +793,7 @@ export default function TextEditor() {
                 )
               })}
               <div >
-                <h1 className='text-md'>Resolved Comments</h1>
+                <p className='text-md'>Resolved Comments</p>
                 {docData?.comments?.filter(com => com.resolved === true)?.map((comment, key) => {
                   const commentReply = tempReplies.find(reply => reply.forComment === comment.commentNumber)
                   return (
