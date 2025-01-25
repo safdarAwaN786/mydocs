@@ -706,7 +706,7 @@ export default function TextEditor() {
             onChange={(newContent) => {
               const difference = levenshtein.get(contentToShow, newContent);
 
-              if (difference >= 200) {  // Check if at least 30 character changes
+              if (difference >= 100) {  // Check if at least 30 character changes
                 console.log(`Content changed by ${difference} characters`);
                 console.log('temphighlighted', tempHighlighted);
 
@@ -727,7 +727,7 @@ export default function TextEditor() {
             onBlur={(newContent) => {
               const difference = levenshtein.get(contentToShow, newContent);
 
-              if (difference >= 200) {  // Check if at least 30 character changes
+              if (difference >= 100) {  // Check if at least 30 character changes
                 console.log(`Content changed by ${difference} characters`);
                 console.log('temphighlighted', tempHighlighted);
 
