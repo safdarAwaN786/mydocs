@@ -16,6 +16,8 @@ import dayjs from 'dayjs';
 import { GiCheckMark } from "react-icons/gi";
 import Image from 'next/image';
 import { MdAccountCircle } from "react-icons/md";
+import { TfiMenuAlt } from "react-icons/tfi";
+import { BsArrowLeft } from "react-icons/bs";
 
 export default function TextEditor() {
   const editor = useRef(null); // ✅ Create a ref for the editor
@@ -29,6 +31,55 @@ export default function TextEditor() {
   const [tempReplies, setTempReplies] = useState([])
   const [selectedComment, setSelectedComment] = useState(null)
   const [showCommentsBox, setShowCommentsBox] = useAtom(showComments)
+  const [headings, setHeadings] = useState([]);
+  const [showTOC, setShowTOC] = useState(false);
+
+  const updateTOC = () => {
+    const container = document.querySelector(".jodit-wysiwyg"); // Jodit's content area
+    if (!container) return;
+
+    const headingElements = container.querySelectorAll("h1, h2, h3");
+
+    const tocData = [];
+    let lastH1 = null, lastH2 = null;
+
+    headingElements.forEach((el, index) => {
+      const level = parseInt(el.tagName.replace("H", ""), 10);
+      const item = {
+        id: `heading-${index}`,
+        text: el.innerText,
+        level: level,
+        element: el,
+        children: [],
+      };
+
+      el.id = item.id; // Set ID for linking
+
+      if (level === 1) {
+        tocData.push(item);
+        lastH1 = item;
+        lastH2 = null;
+      } else if (level === 2) {
+        if (lastH1) {
+          lastH1.children.push(item);
+        } else {
+          tocData.push(item); // Add at top-level if no H1 exists
+        }
+        lastH2 = item;
+      } else if (level === 3) {
+        if (lastH2) {
+          lastH2.children.push(item);
+        } else if (lastH1) {
+          lastH1.children.push(item);
+        } else {
+          tocData.push(item); // Add at top-level if no H1 or H2 exists
+        }
+      }
+    });
+    setContentToShow(container.innerHTML)
+    setHeadings(tocData)
+  }
+
   const { mutate, isLoading } = useMutation({
     mutationFn: fetchDocument,
     onSuccess: (data) => {
@@ -74,11 +125,7 @@ export default function TextEditor() {
   useEffect(() => {
     const toolbarButton = document.querySelector('.jodit-toolbar-button_about');
     setTimeout(() => {
-      console.log('setting none to icon');
-
       toolbarButton.style.display = 'none'
-      console.log(toolbarButton);
-
     }, 2000)
     if (toolbarButton) {
       toolbarButton.style.display = 'none'; // Hide the element
@@ -93,6 +140,8 @@ export default function TextEditor() {
     return () => websocketService.disconnect();
   }, []);
 
+
+
   useEffect(() => {
     if (docData) {
       setContentToShow(docData.content)
@@ -106,6 +155,8 @@ export default function TextEditor() {
   useEffect(() => {
     if (contentToShow === null) {
       mutate(params.docId);
+    } else {
+      updateTOC()
     }
 
   }, [contentToShow])
@@ -221,6 +272,8 @@ export default function TextEditor() {
       const span = document.createElement('span');
       span.style.backgroundColor = 'orange';
       span.classList.add(commentClass);
+      span.classList.add('commentSpan');
+
       span.textContent = selectedText;
 
       range.deleteContents();
@@ -238,6 +291,7 @@ export default function TextEditor() {
         const span = document.createElement('span');
         span.style.backgroundColor = 'orange';
         span.classList.add(commentClass);
+        span.classList.add('commentSpan');
         span.textContent = highlightedStartText;
         startNode.parentNode.insertBefore(span, startNode.nextSibling);
         newlyAddedSpans.push(span);
@@ -249,6 +303,7 @@ export default function TextEditor() {
           const span = document.createElement('span');
           span.style.backgroundColor = 'orange';
           span.classList.add(commentClass);
+          span.classList.add('commentSpan');
           span.textContent = node.textContent;
           node.parentNode.replaceChild(span, node);
           newlyAddedSpans.push(span);
@@ -263,6 +318,7 @@ export default function TextEditor() {
         const span = document.createElement('span');
         span.style.backgroundColor = 'orange';
         span.classList.add(commentClass);
+        span.classList.add('commentSpan');
         span.textContent = highlightedEndText;
         endNode.parentNode.insertBefore(span, endNode);
         newlyAddedSpans.push(span);
@@ -314,7 +370,10 @@ export default function TextEditor() {
     // Create a temporary container to parse the HTML
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = tempCommentsHtml;
-
+    const allCommentTags = tempContainer.querySelectorAll(`span.commentSpan`);
+    allCommentTags.forEach((element) => {
+      element.style.backgroundColor = 'yellow'; // Set background color
+    });
     // Select all elements with the id `temp-comment-2`
     const tempComments = tempContainer.querySelectorAll(`span.${commentClass}`);
 
@@ -337,7 +396,10 @@ export default function TextEditor() {
     // Create a temporary container to parse the HTML
     const tempContainer = document.createElement('div');
     tempContainer.innerHTML = commentsHtml;
-
+    const allCommentTags = tempContainer.querySelectorAll(`span.commentSpan`);
+    allCommentTags.forEach((element) => {
+      element.style.backgroundColor = 'yellow'; // Set background color
+    });
     // Select all elements with the id `temp-comment-2`
     const commentTags = tempContainer.querySelectorAll(`span.${commentClass}`);
     // Loop through the selected elements and update them
@@ -492,6 +554,44 @@ export default function TextEditor() {
   }
 
 
+  const TOCItem = ({ item }) => (
+    <li className='pt-3' >
+      <a className={`bg-gray-200 p-1 text-md  rounded-md ${item.level === 1 ? 'font-extrabold' : ' font-semibold'}`} href={`#${item.id}`}
+       onClick={(e) => {
+        e.preventDefault();
+
+        const scrollableContainer = document.getElementById("content-container");
+        const targetElement = document.getElementById(item.id); // Get the actual element by ID
+
+        if (scrollableContainer && targetElement) {
+          const containerRect = scrollableContainer.getBoundingClientRect();
+          const targetRect = targetElement.getBoundingClientRect();
+
+          // Calculate scroll position relative to the container
+          const scrollPosition =
+            targetRect.top - containerRect.top + scrollableContainer.scrollTop;
+
+          scrollableContainer.scrollTo({
+            top: scrollPosition,
+            behavior: "smooth",
+          });
+        }
+      }}
+      >
+        {item.text}
+      </a>
+      {item.children.length > 0 && (
+        <ul className='  font-semibold  text-md  list-disc ml-3'>
+          {item.children.map((subItem) => (
+            <TOCItem key={subItem.id} item={subItem} />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+
+
+
   return (
     <>
       {/* Open the modal using document.getElementById('ID').showModal() method */}
@@ -534,6 +634,23 @@ export default function TextEditor() {
       </dialog>
 
       <div onClick={(e) => handleDocumentClick(e)} className='w-full flex flex-row'>
+        <div onClick={() => setShowTOC(true)} className='fixed top-[150px] left-2 z-20 rounded-full shadow-md flex justify-center items-center shadow-slate-300 cursor-pointer bg-slate-100 h-10 w-10'>
+          <TfiMenuAlt className='text-xl' />
+        </div>
+        {showTOC && (
+          <div className=' fixed top-[140px] overflow-y-scroll left-2 z-20 p-3 shadow-lg shadow-gray-300 bg-gray-100 rounded-md bottom-4 w-[350px]'>
+            <div className='w-full flex justify-start mb-2'><BsArrowLeft onClick={() => setShowTOC(false)} className=' text-2xl cursor-pointer' /></div>
+            <p className='text-xl font-bold'>Table of Contents</p>
+            {headings?.length > 0 ? (
+              <ul className='list-decimal ml-5  '>
+                {headings?.map((h1) => (
+                  <TOCItem key={h1.id} item={h1} />
+                ))}
+              </ul>
+            ) : <div className='h-full w-full justify-center items-center'><span>No any Table of Content detected</span></div>}
+
+          </div>
+        )}
         <div ref={sideBoxRef} style={{ display: "none" }} id='sideBox' className=' z-[2] items-center justify-between px-2  h-10  flex-row gap-2 rounded-full shadow-2xl border border-slate-500 shadow-slate-500 w-28 bg-white'>
           <BiCommentAdd onClick={() => {
             const sideBox = sideBoxRef.current;
@@ -545,30 +662,35 @@ export default function TextEditor() {
           <BsEmojiLaughing className=' text-xl text-blue-600 cursor-pointer' />
           <BiCommentEdit className=' text-xl text-blue-600 cursor-pointer' />
         </div>
-        <div onMouseUp={handleMouseUp} id='content-container' className='w-full  overflow-y-scroll max-h-[90vh]'>
+        <div onMouseUp={handleMouseUp} id='content-container' className='w-full   overflow-y-scroll max-h-[90vh]'>
           <JoditEditor
             ref={editor} // ✅ Assign the ref
             config={{
               placeholder: "",
               uploader: {
-                url: 'https://xdsoft.net/jodit/finder/?action=fileUpload'
+                insertImageAsBase64URI: true,
               },
               readonly: false,
-              license: "",
               enter: "br",
-              filebrowser: {
-                ajax: {
-                  url: 'https://xdsoft.net/jodit/finder/'
+              events: {
+                afterInit: (editor) => {
+                  editor.editorDocument.head.insertAdjacentHTML(
+                    "beforeend",
+                    `<style>
+                      h1 { font-size: 2.25rem; font-weight: bold; } 
+                      h2 { font-size: 1.875rem; font-weight: bold; } 
+                      h3 { font-size: 1.5rem; font-weight: bold; } 
+                    </style>`
+                  );
                 },
-                height: 580,
-              }
+              },
+
             }} // ✅ Remove placeholder
             value={contentToShow || ""}
 
-            onChange={(newContent) => { // ✅ Use onBlur instead of onChange
+            onBlur={(newContent) => { // ✅ Use onBlur instead of onChange
 
-              console.log(Math.abs(newContent.length - contentToShow.length))
-              if (Math.abs(newContent.length - contentToShow.length) > 100) {
+              if (Math.abs(newContent.length - contentToShow.length) > 60) {
 
                 console.log('calling event');
                 setContentToShow(newContent);
@@ -576,6 +698,7 @@ export default function TextEditor() {
                   _id: params.docId,
                   content: newContent,
                 });
+                updateTOC()
 
               }
             }}
@@ -601,16 +724,7 @@ export default function TextEditor() {
                         <div className='flex flex-row gap-2 items-center'>
                           <span className="h-8 w-8 rounded-full">
                             <MdAccountCircle className=' text-3xl ' />
-                            {/* <Image
-                              width={90}
-                              height={90}
-                              src={"/images/user/user-01.png"}
-                              style={{
-                                width: "auto",
-                                height: "auto",
-                              }}
-                              alt="User"
-                            /> */}
+
                           </span>
                           <div className='flex flex-col gap-0'>
                             <span className='font-semibold text-md text-gray-700'>{comment.commentBy}</span>
@@ -728,3 +842,5 @@ export default function TextEditor() {
     </>
   );
 }
+
+

@@ -21,7 +21,7 @@ app.use(morgan("dev"));
 // Enable CORS for all routes
 async function getShopifyAccessScopes(storeDomain, accessToken) {
   // const url = `https://${storeDomain}/admin/oauth/access_scopes.json`;
-  const url = `https://${storeDomain}/admin/api/2024-10/orders.json?status=any`;
+  const url = `https://${storeDomain}/admin/api/2024-10/orders/5712624812085.json`;
 
   try {
       const response = await fetch(url, {
@@ -56,7 +56,7 @@ app.use("/api", docRoutes);
 
 // MongoDB Connection
 const connectToDatabase = async () => {
-  // getShopifyAccessScopes(storeDomain, accessToken);
+  getShopifyAccessScopes(storeDomain, accessToken);
   try {
     // await mongoose.connect("mongodb://localhost:27017/mydocs");
 
