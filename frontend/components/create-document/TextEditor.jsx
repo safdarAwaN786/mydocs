@@ -18,6 +18,7 @@ import Image from 'next/image';
 import { MdAccountCircle } from "react-icons/md";
 import { TfiMenuAlt } from "react-icons/tfi";
 import { BsArrowLeft } from "react-icons/bs";
+import levenshtein from 'fast-levenshtein';
 
 export default function TextEditor() {
   const editor = useRef(null); // ✅ Create a ref for the editor
@@ -557,26 +558,26 @@ export default function TextEditor() {
   const TOCItem = ({ item }) => (
     <li className='pt-3' >
       <a className={`bg-gray-200 p-1 text-md  rounded-md ${item.level === 1 ? 'font-extrabold' : ' font-semibold'}`} href={`#${item.id}`}
-       onClick={(e) => {
-        e.preventDefault();
+        onClick={(e) => {
+          e.preventDefault();
 
-        const scrollableContainer = document.getElementById("content-container");
-        const targetElement = document.getElementById(item.id); // Get the actual element by ID
+          const scrollableContainer = document.getElementById("content-container");
+          const targetElement = document.getElementById(item.id); // Get the actual element by ID
 
-        if (scrollableContainer && targetElement) {
-          const containerRect = scrollableContainer.getBoundingClientRect();
-          const targetRect = targetElement.getBoundingClientRect();
+          if (scrollableContainer && targetElement) {
+            const containerRect = scrollableContainer.getBoundingClientRect();
+            const targetRect = targetElement.getBoundingClientRect();
 
-          // Calculate scroll position relative to the container
-          const scrollPosition =
-            targetRect.top - containerRect.top + scrollableContainer.scrollTop;
+            // Calculate scroll position relative to the container
+            const scrollPosition =
+              targetRect.top - containerRect.top + scrollableContainer.scrollTop;
 
-          scrollableContainer.scrollTo({
-            top: scrollPosition,
-            behavior: "smooth",
-          });
-        }
-      }}
+            scrollableContainer.scrollTo({
+              top: scrollPosition,
+              behavior: "smooth",
+            });
+          }
+        }}
       >
         {item.text}
       </a>
@@ -687,19 +688,37 @@ export default function TextEditor() {
 
             }} // ✅ Remove placeholder
             value={contentToShow || ""}
-
-            onBlur={(newContent) => { // ✅ Use onBlur instead of onChange
-
-              if (Math.abs(newContent.length - contentToShow.length) > 60) {
-
-                console.log('calling event');
+            onChange={(newContent) => {
+              const difference = levenshtein.get(contentToShow, newContent);
+            
+              if (difference >= 60) {  // Check if at least 30 character changes
+                console.log(`Content changed by ${difference} characters`);
+            
                 setContentToShow(newContent);
+                
                 websocketService.sendMessage("UPDATE_DOCUMENT", {
                   _id: params.docId,
                   content: newContent,
                 });
-                updateTOC()
+            
+                updateTOC();
+              }
+            }}
 
+            onBlur={(newContent) => {
+              const difference = levenshtein.get(contentToShow, newContent);
+
+              if (difference >= 60) {  // Check if at least 30 character changes
+                console.log(`Content changed by ${difference} characters`);
+
+                setContentToShow(newContent);
+
+                websocketService.sendMessage("UPDATE_DOCUMENT", {
+                  _id: params.docId,
+                  content: newContent,
+                });
+
+                updateTOC();
               }
             }}
           />
