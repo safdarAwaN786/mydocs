@@ -5,7 +5,7 @@ const comments = {}; // Simulating in-memory comments
 async function handleCommentEvents(ws, data) {
   // const { comment, docId, updatedContent, commentNumber } = data;
 
-  const { docId, updatedContent, commentNumber, comment, reply } = data;
+  const { docId, updatedContent, commentNumber, comment, reply, commentsToRemove } = data;
   const document = await DocumentModel.findById(docId);
   switch (data.type) {
     case "ADD_COMMENT":
@@ -21,6 +21,7 @@ async function handleCommentEvents(ws, data) {
         },
       ];
       document.content = updatedContent;
+      document.comments = document.comments.filter(comment => !commentsToRemove.includes(comment.commentNumber))
       const updatedDoc = await DocumentModel.findByIdAndUpdate(
         docId,
         document,
@@ -36,14 +37,15 @@ async function handleCommentEvents(ws, data) {
       break;
 
     case "REPLY_COMMENT":
+      document.comments = document.comments.filter(comment => !commentsToRemove.includes(comment.commentNumber))
       const commentIndex = document?.comments?.findIndex(
         (comment) => comment.commentNumber == commentNumber
       );
-
       document.comments[commentIndex].replies = [
         ...document.comments[commentIndex].replies,
         { replyBy: "You", replyDate: new Date(), reply },
       ];
+      document.comments[commentIndex].resolved = false;
       await DocumentModel.findByIdAndUpdate(docId, document);
       ws.send(
         JSON.stringify({
@@ -56,13 +58,15 @@ async function handleCommentEvents(ws, data) {
       break;
 
     case "RESOLVE_COMMENT":
-      const commentInd = document.comments?.findIndex(
+      document.comments = document.comments.filter(comment => !commentsToRemove.includes(comment.commentNumber))
+      const commentId = document.comments?.findIndex(
         (comment) => comment.commentNumber === commentNumber
       );
 
       // document.content = updatedContent;
-      if (commentInd !== undefined && commentInd !== -1) {
-        document.comments[commentInd].resolved = true;
+      if (commentId !== undefined && commentId !== -1) {
+        document.comments[commentId].resolved = true;
+        // document.content = updatedContent;
       } else {
         ws.send(
           JSON.stringify({
@@ -71,8 +75,6 @@ async function handleCommentEvents(ws, data) {
             doc: document,
           })
         );
-
-        break;
       }
       await DocumentModel.findByIdAndUpdate(docId, document);
       ws.send(

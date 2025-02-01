@@ -1,0 +1,68 @@
+import { applySavingHighlights, getCommentsToRemove, removeTempHighlight } from '@/functions/text-editorFns';
+import { clickedComment, currentDoc, wholeLoading } from '@/store/atoms';
+import websocketService from '@/webSocket/websocketService';
+import { useAtom, useStore } from 'jotai';
+import React, { useState } from 'react'
+import { IoClose } from 'react-icons/io5';
+
+export default function AddComment({docId}) {
+    const [selectedComment, setSelectedComment] = useAtom(clickedComment)
+    const [currentComment, setCurrentComment] = useState("")
+    const [docData, setDocData] = useAtom(currentDoc);
+    const container = document.querySelector(".jodit-wysiwyg");
+    const [loading, setLoading] = useAtom(wholeLoading);
+    const store = useStore()
+    const handleSubmitComment = async (e) => {
+        e.preventDefault()
+        if (currentComment !== "") {
+            setSelectedComment(null)
+            const updatedContentToSave = applySavingHighlights(docData)
+            setLoading(true)
+            const commentsToRemove = getCommentsToRemove(store)
+            websocketService.sendMessage("ADD_COMMENT", {
+                docId: docId,
+                comment: currentComment,
+                updatedContent: updatedContentToSave,
+                commentNumber: docData?.comments?.length > 0 ? (docData?.comments[docData?.comments?.length - 1]).commentNumber + 1 : 1,
+                commentsToRemove
+            });
+            document.getElementById("my_modal_1").close();
+            setCurrentComment("")
+            setDocData({ ...docData, content: updatedContentToSave })
+            container.innerHTML = updatedContentToSave
+        }
+    };
+    return (
+        <>
+            <dialog id="my_modal_1" className="modal">
+                <div className="modal-box p-y-0">
+                    <div className="modal-action flex flex-row justify-between items-center py-0 my-0">
+                        <h3 className="font-semibold text-lg">New Comment</h3>
+                        <form method="dialog">
+
+                            <button onClick={() => {
+                                removeTempHighlight()
+                                container.innerHTML = docData?.content
+                                setCurrentComment("");
+                            }} className=" p-1 bg-slate-200 rounded-full"><IoClose className='text-gray-600 text-2xl' /></button>
+                        </form>
+                    </div>
+                    <form id='comment-form-container' onSubmit={handleSubmitComment} className={`w-full`}>
+                        <div className='my-2 flex flex-wrap items-end gap-1'>
+                            <input value={currentComment} onChange={e => {
+                                setCurrentComment(e.target.value)
+                            }} placeholder='Write Comment' className='bg-gray-200 text-black-2 p-2 focus:outline-none border-0 w-[100%] px-3 rounded-full' required />
+                            <div className='flex-row justify-end w-full flex'>
+                                <button type='submit'
+                                    className="inline-flex h-6 w-8 items-center justify-center rounded-full bg-blue-700 px-14 py-4 my-1 text-center font-medium text-white hover:bg-opacity-90 "
+                                >Comment
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </dialog>
+
+        </>
+    )
+}

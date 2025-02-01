@@ -2,13 +2,21 @@ const documents = {}; // Simulating in-memory document storage
 const DocumentModel = require("../models/Document");
 
 async function handleDocumentEvents(ws, data) {
+  const { _id, title, content, commentsToRemove } = data;
+  console.log(commentsToRemove);
+
+  const document = await DocumentModel.findById(_id);
   switch (data.type) {
     case "UPDATE_DOCUMENT":
-      const { _id, title, content } = data;
       if (_id) {
+        document.comments = document.comments.filter(comment => !commentsToRemove.includes(comment.commentNumber))
+        document.title = title;
+        document.content = content;
+        console.log(document.comments);
+
         await DocumentModel.findByIdAndUpdate(
           _id,
-          { title, content },
+          document,
           { new: true }
         )
           .then((res) => {

@@ -38,6 +38,7 @@ export default function EditorHeader() {
           </div>
         </div>
         <div className='flex gap-4 flex-row items-center'>
+        <button className="btn btn-outline btn-primary">Reviewed</button>
           <MdOutlineMessage onClick={()=> setShowCommentsBox(!showCommentsBox)} className='text-black text-xl cursor-pointer hover:text-blue-500' />
           <div className='w-24 rounded-full h-10 text-xl bg-blue-200 gap-2 cursor-pointer flex items-center justify-center hover:bg-blue-300'>
             <FaUserGroup />

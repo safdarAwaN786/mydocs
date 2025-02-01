@@ -24,6 +24,8 @@ module.exports.getDocumentById = async (req, res) => {
 
 module.exports.geAllDocuments = async (req, res) => {
   try {
+    console.log('request to get all docs');
+    
     const docs = await Document.find({
       content: { $exists: true, $ne: "", $type: "string" },
     });

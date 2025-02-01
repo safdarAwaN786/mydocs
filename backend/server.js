@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 const {  setupSocketServer } = require("./websockets"); // Import WebSocket setup
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 7000;
 
 app.use(
   cors({
@@ -19,30 +19,30 @@ app.use(
 app.use(express.json());
 app.use(morgan("dev"));
 // Enable CORS for all routes
-async function getShopifyAccessScopes(storeDomain, accessToken) {
-  // const url = `https://${storeDomain}/admin/oauth/access_scopes.json`;
-  const url = `https://${storeDomain}/admin/api/2024-10/orders/5712624812085.json`;
+// async function getShopifyAccessScopes(storeDomain, accessToken) {
+//   // const url = `https://${storeDomain}/admin/oauth/access_scopes.json`;
+//   const url = `https://${storeDomain}/admin/api/2024-10/orders/5712624812085.json`;
 
-  try {
-      const response = await fetch(url, {
-          method: "GET",
-          headers: {
-              "X-Shopify-Access-Token": accessToken,
-              "Content-Type": "application/json"
-          }
-      });
+//   try {
+//       const response = await fetch(url, {
+//           method: "GET",
+//           headers: {
+//               "X-Shopify-Access-Token": accessToken,
+//               "Content-Type": "application/json"
+//           }
+//       });
 
-      if (!response.ok) {
-          throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
+//       if (!response.ok) {
+//           throw new Error(`Error: ${response.status} ${response.statusText}`);
+//       }
 
-      const data = await response.json();
-      console.log("Response Data:", data);
-      return data;
-  } catch (error) {
-      console.error("Failed to fetch access scopes:", error.message);
-  }
-}
+//       const data = await response.json();
+//       console.log("Response Data:", data);
+//       return data;
+//   } catch (error) {
+//       console.error("Failed to fetch access scopes:", error.message);
+//   }
+// }
 
 // Example Usage:
 const storeDomain = "sidesumtest.myshopify.com"; // Replace with your store domain

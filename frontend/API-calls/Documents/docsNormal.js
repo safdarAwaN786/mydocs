@@ -1,6 +1,6 @@
-// export const BASE_URL = "http://localhost:5000/api";
+// export const BASE_URL = "http://localhost:7000/api";
 export const BASE_URL = "https://mydocs-oxbq.onrender.com/api";
-// export const WS_URL = "ws://localhost:5000"
+// export const WS_URL = "ws://localhost:7000"
 export const WS_URL = "wss://mydocs-oxbq.onrender.com";
 
 
@@ -46,9 +46,9 @@ export const fetchAllDocuments = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      cache: "no-store", // Ensures fresh data (use `force-cache` if you prefer caching)
     });
-
+    console.log(response);
+    
     if (!response.ok) {
       throw new Error(`Failed to fetch documents: ${response.status} ${response.statusText}`);
     }
