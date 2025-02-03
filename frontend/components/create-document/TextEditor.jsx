@@ -44,7 +44,8 @@ export default function TextEditor() {
            
          </div>`
       ).join("");
-      container.innerHTML = contentHTML
+      editor.current.value = contentHTML
+      // container.innerHTML = contentHTML
     }
     websocketService.connect(WS_URL, setDocData);
     return () => {
@@ -73,7 +74,8 @@ export default function TextEditor() {
    </div>`
       ).join(""); // Join all strings together
       const container = document.querySelector(".jodit-wysiwyg");
-      if (container) container.innerHTML = contentHTML;
+      editor.current.value = contentHTML
+      // if (container) container.innerHTML = contentHTML;
       setDocData(data);
     },
     onError: () => {
@@ -99,7 +101,9 @@ export default function TextEditor() {
 
 
     // Update the editor content safely
-    container.innerHTML = contentHTML;
+    // editor.current.value = contentHTML
+    editor.current.setEditorValue(contentHTML)
+    // container.innerHTML = contentHTML;
     if (cursorPosition) {
       restoreCursorPosition(cursorPosition);
     }
@@ -437,13 +441,14 @@ export default function TextEditor() {
                 </div>`
               ).join(""))}
               onChange={(newContent) => {
+                const cursor = saveCursorPosition()
+                  setCursorPosition(cursor)
                 setTimeout(() => {
                   const currentDocData = docDataRef.current;
                   let updatedPages = [];
                   let deletedPages = [];
                   let newPages = [];
-                  const cursor = saveCursorPosition()
-                  setCursorPosition(cursor)
+                  
                   currentDocData.content.forEach((page) => {
                     const pageNumber = page.pageNumber;
                     const pageElement = document.getElementById('page-' + pageNumber);
