@@ -167,31 +167,41 @@ export const removeTempHighlight = (docData, selectedComment, docId) => {
 };
 
 export const applySavingHighlights = (docData) => {
-  const container = document.getElementsByClassName('jodit-wysiwyg')[0];
-  const tempCommentsHtml = container?.innerHTML;
+  if (!docData || !docData.content) return [];
 
-  if (!tempCommentsHtml) return '';
-  const commentClass = `comment-${docData?.comments?.length > 0
-    ? (docData?.comments[docData?.comments.length - 1]).commentNumber + 1
-    : 1}`;
-  // Create a temporary container to parse the HTML
-  const tempContainer = document.createElement('div');
-  tempContainer.innerHTML = tempCommentsHtml;
-  const allCommentTags = tempContainer.querySelectorAll(`span.commentSpan`);
-  allCommentTags.forEach((element) => {
-    element.style.backgroundColor = 'yellow'; // Set background color
+  let updatedPages = [];
+
+  docData.content.forEach((page) => {
+    const pageElement = document.getElementById(`page-${page.pageNumber}`);
+    if (!pageElement) return;
+
+    const clonedPage = pageElement.cloneNode(true);
+    const tempContainer = document.createElement('div');
+    tempContainer.innerHTML = clonedPage.innerHTML;
+
+    const commentClass = `comment-${docData?.comments?.length > 0
+      ? (docData?.comments[docData?.comments.length - 1]).commentNumber + 1
+      : 1}`;
+
+    // Highlight all existing comment spans
+    tempContainer.querySelectorAll(`span.commentSpan`).forEach((element) => {
+      element.style.backgroundColor = 'yellow';
+    });
+
+    // Highlight new comment spans
+    tempContainer.querySelectorAll(`span.${commentClass}`).forEach((element) => {
+      element.style.backgroundColor = 'yellow';
+    });
+
+    updatedPages.push({
+      pageNumber: page.pageNumber,
+      content: tempContainer.innerHTML.trim(),
+    });
   });
 
-  // Select all elements with the id `temp-comment-2`
-  const tempComments = tempContainer.querySelectorAll(`span.${commentClass}`);
-
-  // Loop through the selected elements and update them
-  tempComments.forEach((element, i) => {
-    element.style.backgroundColor = 'yellow'; // Set background color
-  });
-  // Return the updated HTML
-  return tempContainer.innerHTML;
+  return updatedPages;
 };
+
 
 export const refreshTOC = () => {
   const container = document.querySelector(".jodit-wysiwyg"); // Jodit's content area
@@ -265,10 +275,10 @@ export const applyCommentSelection = (selectedComment) => {
   // Return the updated HTML
   container.innerHTML = tempContainer.innerHTML
 
-  
+
 };
 
-export const scrollToCommentContent = (commentNumber)=>{
+export const scrollToCommentContent = (commentNumber) => {
   const scrollableContainer = document.getElementById("content-container");
   const targetElement = document.getElementsByClassName('comment-' + commentNumber)[0]
   if (scrollableContainer && targetElement) {
@@ -291,9 +301,9 @@ export const scrollToActualComment = (commentNumber) => {
     const targetRect = targetElement.getBoundingClientRect();
     // Calculate scroll position relative to the container
     const scrollPosition = targetRect.top - containerRect.top + scrollableContainer.scrollTop;
-    
+
     scrollableContainer.scrollTo({
-      top: scrollPosition -130,
+      top: scrollPosition - 130,
       behavior: "smooth",
     });
   }
@@ -368,3 +378,126 @@ export const restoreCursorPosition = ({ start, end }) => {
     selection.addRange(range);
   }
 };
+
+
+const PAGE_HEIGHT = 600;
+
+export const handlePageOverflow = (pageNumber, pageContentElement) => {
+
+  let overflowText = extractOverflowingContent(pageContentElement, PAGE_HEIGHT);
+  if (!overflowText) return { overflowPages: { updatedPages: [], newPages: [] } };
+
+  const updatedPages = [];
+  const newPages = [];
+
+  updatedPages.push({ pageNumber, content: pageContentElement.innerHTML });
+
+  let nextPageNumber = pageNumber + 1;
+  let nextPageDiv = document.getElementById(`page-${nextPageNumber}`);
+
+  if (nextPageDiv) {
+    const nextPageContentElement = nextPageDiv.querySelector('.page-content');
+    nextPageContentElement.innerHTML = overflowText + nextPageContentElement.innerHTML;
+
+    updatedPages.push({ pageNumber: nextPageNumber, content: nextPageContentElement.innerHTML });
+  } else {
+    while (overflowText.length > 0) {
+      const newPageContent = overflowText.substring(0, PAGE_HEIGHT);
+      overflowText = overflowText.substring(PAGE_HEIGHT);
+
+      const newPageDiv = document.createElement('div');
+      newPageDiv.id = `page-${nextPageNumber}`;
+      newPageDiv.className = 'docPage';
+      newPageDiv.innerHTML = `
+        <div class="page-number">${nextPageNumber}</div>
+        <div class="page-content">${newPageContent}</div>
+      `;
+
+      document.body.appendChild(newPageDiv);
+      newPages.push({ pageNumber: nextPageNumber, content: newPageContent });
+
+      nextPageNumber++;
+    }
+  }
+
+  return { overflowPages: { updatedPages, newPages } };
+};
+
+const extractOverflowingContent = (pageContentElement, maxHeight) => {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = pageContentElement.innerHTML;
+  document.body.appendChild(tempDiv);
+
+  let overflowText = '';
+  while (tempDiv.scrollHeight > maxHeight && tempDiv.childNodes.length > 0) {
+    overflowText = tempDiv.lastChild.outerHTML + overflowText;
+    tempDiv.removeChild(tempDiv.lastChild);
+  }
+
+  pageContentElement.innerHTML = tempDiv.innerHTML;
+  document.body.removeChild(tempDiv);
+
+  return overflowText;
+};
+
+
+export const insertNumberedList = (editor) => {
+  const selection = editor.s.insertNode(document.createElement("ol"));
+  const listItem = document.createElement("li");
+  listItem.textContent = "New Item";
+  selection.appendChild(listItem);
+  editor.s.setCursorIn(listItem);
+};
+
+
+export const insertSubpointsList = (editor) => {
+  const selection = editor.s.current();
+  if (selection) {
+    const currentLi = selection.closest("li");
+    if (currentLi) {
+      let subList = currentLi.querySelector("ol");
+      if (!subList) {
+        subList = document.createElement("ol");
+        currentLi.appendChild(subList);
+      }
+      const subItem = document.createElement("li");
+      subItem.textContent = "Sub Item";
+      subList.appendChild(subItem);
+      editor.s.setCursorIn(subItem);
+    }
+  }
+};
+
+
+export const endListing = (editor) => {
+  const selection = editor.s.current();
+  if (selection) {
+    const closestOl = selection.closest("ol");
+    if (closestOl) {
+      closestOl.remove();
+      const newDiv = document.createElement("div");
+      newDiv.textContent = "New Paragraph Here...";
+      editor.s.insertNode(newDiv);
+      editor.s.setCursorIn(newDiv);
+    }
+  }
+};
+
+
+
+
+
+
+export function placeCursorAtEnd(element) {
+  if (document.createRange && window.getSelection) {
+    let range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    let sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+
+
+

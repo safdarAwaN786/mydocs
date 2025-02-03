@@ -5,7 +5,7 @@ const comments = {}; // Simulating in-memory comments
 async function handleCommentEvents(ws, data) {
   // const { comment, docId, updatedContent, commentNumber } = data;
 
-  const { docId, updatedContent, commentNumber, comment, reply, commentsToRemove } = data;
+  const { docId, updatedContent,updatedPages, commentNumber, comment, reply, commentsToRemove } = data;
   const document = await DocumentModel.findById(docId);
   switch (data.type) {
     case "ADD_COMMENT":
@@ -20,8 +20,8 @@ async function handleCommentEvents(ws, data) {
           resolved: false,
         },
       ];
-      document.content = updatedContent;
-      document.comments = document.comments.filter(comment => !commentsToRemove.includes(comment.commentNumber))
+      document.content = updatedPages;
+      document.comments = document.comments.filter(comment => !commentsToRemove?.includes(comment.commentNumber))
       const updatedDoc = await DocumentModel.findByIdAndUpdate(
         docId,
         document,

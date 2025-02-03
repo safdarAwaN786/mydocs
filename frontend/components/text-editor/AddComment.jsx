@@ -5,7 +5,7 @@ import { useAtom, useStore } from 'jotai';
 import React, { useState } from 'react'
 import { IoClose } from 'react-icons/io5';
 
-export default function AddComment({docId}) {
+export default function AddComment({ docId }) {
     const [selectedComment, setSelectedComment] = useAtom(clickedComment)
     const [currentComment, setCurrentComment] = useState("")
     const [docData, setDocData] = useAtom(currentDoc);
@@ -13,25 +13,53 @@ export default function AddComment({docId}) {
     const [loading, setLoading] = useAtom(wholeLoading);
     const store = useStore()
     const handleSubmitComment = async (e) => {
-        e.preventDefault()
-        if (currentComment !== "") {
-            setSelectedComment(null)
-            const updatedContentToSave = applySavingHighlights(docData)
-            setLoading(true)
-            const commentsToRemove = getCommentsToRemove(store)
-            websocketService.sendMessage("ADD_COMMENT", {
-                docId: docId,
-                comment: currentComment,
-                updatedContent: updatedContentToSave,
-                commentNumber: docData?.comments?.length > 0 ? (docData?.comments[docData?.comments?.length - 1]).commentNumber + 1 : 1,
-                commentsToRemove
-            });
-            document.getElementById("my_modal_1").close();
-            setCurrentComment("")
-            setDocData({ ...docData, content: updatedContentToSave })
-            container.innerHTML = updatedContentToSave
-        }
+        e.preventDefault();
+        if (currentComment === "") return;
+
+        setSelectedComment(null);
+        setLoading(true);
+
+        const updatedPages = applySavingHighlights(docData);
+        const commentsToRemove = getCommentsToRemove(store);
+        const pagesToSend = updatedPages.map(page => {
+            const pageElement = document.getElementById('page-'+ page.pageNumber);
+            const clonedPage = pageElement.cloneNode(true);
+            clonedPage.removeChild(clonedPage.querySelector('.page-number'))
+            return { pageNumber : page.pageNumber, content : clonedPage.innerHTML}
+        })
+        websocketService.sendMessage("ADD_COMMENT", {
+            docId: docId,
+            comment: currentComment,
+            updatedPages : pagesToSend, // Send the updated pages instead of a single string
+            commentNumber: docData?.comments?.length > 0
+                ? docData?.comments[docData?.comments?.length - 1].commentNumber + 1
+                : 1,
+            commentsToRemove
+        });
+
+        document.getElementById("my_modal_1").close();
+        setCurrentComment("");
+
+        // Update docData state with new content
+        const newDocData = {
+            ...docData,
+            content: docData.content.map((page) => {
+                const updatedPage = updatedPages.find((p) => p.pageNumber === page.pageNumber);
+                return updatedPage ? { ...page, content: updatedPage.content } : page;
+            }),
+        };
+
+        setDocData(newDocData);
+
+        // Update the editor pages
+        updatedPages.forEach(({ pageNumber, content }) => {
+            const pageElement = document.getElementById(`page-${pageNumber}`);
+            if (pageElement) {
+                pageElement.innerHTML = content;
+            }
+        });
     };
+
     return (
         <>
             <dialog id="my_modal_1" className="modal">
@@ -41,8 +69,14 @@ export default function AddComment({docId}) {
                         <form method="dialog">
 
                             <button onClick={() => {
+
                                 removeTempHighlight()
-                                container.innerHTML = docData?.content
+                                container.innerHTML = docData.content.map((page, i) =>
+                                    `<div id="page-${page.pageNumber}" class="docPage">
+    ${page.content}
+         <div class="page-number">${i + 1}</div>
+       </div>`
+                                ).join("")
                                 setCurrentComment("");
                             }} className=" p-1 bg-slate-200 rounded-full"><IoClose className='text-gray-600 text-2xl' /></button>
                         </form>

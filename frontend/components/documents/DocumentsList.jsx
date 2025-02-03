@@ -1,6 +1,6 @@
 "use client"
 import { createNewDoc, fetchAllDocuments } from '@/API-calls/Documents/docsNormal';
-import { currentDoc } from '@/store/atoms';
+import { allPages, currentDoc } from '@/store/atoms';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAtom } from 'jotai';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 export default function DocumentsList() {
   const [docState, setDocState] = useAtom(currentDoc);
   const router = useRouter()
+  const [pages, setPages] = useAtom(allPages)
   const [loading, setLoading] = React.useState(false);
   const { isLoading, isError, data, error } = useQuery({
     queryKey: ['docs'],
@@ -40,6 +41,7 @@ export default function DocumentsList() {
                 <tr onClick={() => {
                   setLoading(true)
                   setDocState(doc);
+                  setPages([])
                   router.push(`/doc-editor/${doc._id}`);
                   }} key={doc._id} className="hover cursor-pointer" >
                   <th>{doc.docID}</th>

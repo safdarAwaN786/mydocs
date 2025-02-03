@@ -3,13 +3,28 @@
 }
 
 .jodit-container:not(.jodit_inline) .jodit-wysiwyg {
-  min-height: 2000px !important;
-  padding: 34px !important;
+  background-color: #fafafa !important;
+  min-height: 1500px !important;
+  padding: 0px !important;
+  border: 0px solid #949393 !important;
+  overflow-y: hidden;
+}
+
+.docPage {
+  position: relative;
   border: 1px solid #949393 !important;
+  padding-top: 0px !important;
+  padding: 20px !important;
+  min-height: 1500px !important;
+  margin: 30px 0px;
+  width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .jodit-container:not(.jodit_inline) .jodit-workplace {
-  width: 800px !important;
+  width: 900px !important;
   margin: 20px auto !important;
 }
 
@@ -55,4 +70,40 @@
   position: sticky !important;
  
 }
+
+
+.page-number {
+  position: absolute;
+  bottom: 2px;
+  width: 100%;
+  text-align: right;
+  right: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  color: gray;
+  pointer-events: none; /* Makes it non-editable */
+  user-select: none; /* Prevents selection */
+}
+
+
+
+
+/* Main list starts with 1, 2, 3 */
+.custom-numbered-list {
+  counter-reset: list-counter;
+  list-style: none;
+  padding-left: 20px;
+}
+
+/* List items inside the list */
+.custom-numbered-list > li {
+  counter-increment: list-counter;
+}
+
+/* Generate numbers like 1, 2, 3 */
+.custom-numbered-list > li::before {
+  content: counters(list-counter, ".") ". ";
+  font-weight: bold;
+}
+
 

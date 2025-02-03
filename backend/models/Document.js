@@ -14,10 +14,12 @@ const documentSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-    content: {
-      type: String,
-      default: "",
-    },
+    content: [
+    //   {
+    //   pageNumber: { type: Number, required: true },
+    //   content: { type: String, required: true }
+    // }
+  ],
     author: {
       type: String,
       //   required: true,
