@@ -39,8 +39,9 @@ export default function TextEditor() {
       setLoading(false)
       const contentHTML = docData.content.map((page, i) =>
         `<div id="page-${page.pageNumber}" class="docPage">
-      <div class="page-content" contenteditable="true">${page.content || ""}</div>
-           <div class="page-number">${i + 1}</div>
+      <div class="page-number">${i + 1}</div>
+    ${page.content || ""}
+           
            
          </div>`
       ).join("");
@@ -68,8 +69,9 @@ export default function TextEditor() {
       // Build the full HTML content with non-editable page numbers
       let contentHTML = data.content.map((page, i) =>
         `<div id="page-${page.pageNumber}" class="docPage">
-      <div class="page-content" contenteditable="true">${page.content || ""}</div>
-     <div class="page-number">${i + 1}</div>
+      <div class="page-number">${i + 1}</div>
+    ${page.content || ""}
+     
     
    </div>`
       ).join(""); // Join all strings together
@@ -92,8 +94,9 @@ export default function TextEditor() {
     // Build the full HTML content
     const contentHTML = docData.content.map((page, i) =>
       `<div id="page-${page.pageNumber}" class="docPage">
+     <div class="page-number">${i + 1}</div>
     ${page.content}
-         <div class="page-number">${i + 1}</div>
+        
 
        </div>`
     ).join("");
@@ -436,8 +439,8 @@ export default function TextEditor() {
               config={editorConfigs}
               value={JSON.stringify(docData?.content.map((page, i) =>
                 `<div id="page-${page.pageNumber}" class="docPage">
+                <div class="page-number">${i + 1}</div>
                   ${page.content}
-                  <div class="page-number">${i + 1}</div>
                 </div>`
               ).join(""))}
               onChange={(newContent) => {
