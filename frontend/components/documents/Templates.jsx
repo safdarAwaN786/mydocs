@@ -16,7 +16,8 @@ export default function Templates() {
         mutationFn: createNewDoc,
         onSuccess: (data) => {
             setDocState(data);
-            router.push("/doc-editor/" + data._id);
+            window.location.href = "/doc-editor/" + data._id
+            // router.push("/doc-editor/" + data._id);
         },
         onError: (error) => {
             console.error("Error creating document:", error);

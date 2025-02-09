@@ -468,7 +468,31 @@ export const insertSubpointsList = (editor) => {
   }
 };
 
+export const updateEditorContent = (docData, cursorPosition) => {
+  const container = document.querySelector(".jodit-wysiwyg");
+  if (!docData || !docData.content || !container) return; // Ensure everything is loaded
+  console.log(docData);
 
+  // Build the full HTML content
+  const contentHTML = docData.content.map((page, i) =>
+    `<div contenteditable="true" id="page-${page.pageNumber}" class="docPage">
+   <div class="page-number">${i + 1}</div>
+  ${page.content}
+     </div>`
+  ).join("");
+  // Restore cursor position before updating
+
+
+  // Update the editor content safely
+  // editor.current.value = contentHTML
+  // editor.current.setEditorValue(contentHTML)
+  container.innerHTML = contentHTML;
+  if (cursorPosition) {
+    restoreCursorPosition(cursorPosition);
+  }
+
+
+}
 export const endListing = (editor) => {
   const selection = editor.s.current();
   if (selection) {

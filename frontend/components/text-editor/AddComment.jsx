@@ -1,4 +1,4 @@
-import { applySavingHighlights, getCommentsToRemove, removeTempHighlight } from '@/functions/text-editorFns';
+import { applySavingHighlights, getCommentsToRemove, removeTempHighlight, updateEditorContent } from '@/functions/text-editorFns';
 import { clickedComment, currentDoc, wholeLoading } from '@/store/atoms';
 import websocketService from '@/webSocket/websocketService';
 import { useAtom, useStore } from 'jotai';
@@ -50,7 +50,10 @@ export default function AddComment({ docId }) {
         };
 
         setDocData(newDocData);
-
+        setTimeout(()=>{
+            
+            updateEditorContent(newDocData, cursorPosition)
+          }, 150)
         // Update the editor pages
         updatedPages.forEach(({ pageNumber, content }) => {
             const pageElement = document.getElementById(`page-${pageNumber}`);

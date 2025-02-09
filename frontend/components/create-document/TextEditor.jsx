@@ -14,7 +14,7 @@ import { BiCommentEdit } from "react-icons/bi";
 import levenshtein from 'fast-levenshtein';
 import TableOfContents from '../text-editor/TableOfContents';
 import CommentsList from '../text-editor/CommentsList';
-import { applyCommentSelection, applySavingHighlights, applyTempHighlight, getCommentsToRemove, handlePageOverflow, refreshTOC, removeTempHighlight, restoreCursorPosition, saveCursorPosition, scrollToActualComment, tempHighlighted } from '@/functions/text-editorFns';
+import { applyCommentSelection, applySavingHighlights, applyTempHighlight, getCommentsToRemove, handlePageOverflow, refreshTOC, removeTempHighlight, restoreCursorPosition, saveCursorPosition, scrollToActualComment, tempHighlighted, updateEditorContent } from '@/functions/text-editorFns';
 import AddComment from '../text-editor/AddComment';
 
 export default function TextEditor() {
@@ -38,11 +38,9 @@ export default function TextEditor() {
     } else {
       setLoading(false)
       const contentHTML = docData.content.map((page, i) =>
-        `<div id="page-${page.pageNumber}" class="docPage">
-      <div class="page-number">${i + 1}</div>
-    ${page.content || ""}
-           
-           
+        `<div contenteditable="true" id="page-${page.pageNumber}" class="docPage">
+      <div contenteditable="false" class="page-number">${i + 1}</div>
+      ${page.content || ""}
          </div>`
       ).join("");
       editor.current.value = contentHTML
@@ -68,10 +66,9 @@ export default function TextEditor() {
       }
       // Build the full HTML content with non-editable page numbers
       let contentHTML = data.content.map((page, i) =>
-        `<div id="page-${page.pageNumber}" class="docPage">
-      <div class="page-number">${i + 1}</div>
-    ${page.content || ""}
-     
+        `<div contenteditable="true" id="page-${page.pageNumber}" class="docPage">
+      <div contenteditable="false" class="page-number">${i + 1}</div>
+      ${page.content || ""}
     
    </div>`
       ).join(""); // Join all strings together
@@ -87,29 +84,7 @@ export default function TextEditor() {
 
 
   useEffect(() => {
-    const container = document.querySelector(".jodit-wysiwyg");
-    if (!docData || !docData.content || !container) return; // Ensure everything is loaded
-    console.log(docData);
-
-    // Build the full HTML content
-    const contentHTML = docData.content.map((page, i) =>
-      `<div id="page-${page.pageNumber}" class="docPage">
-     <div class="page-number">${i + 1}</div>
-    ${page.content}
-        
-
-       </div>`
-    ).join("");
-    // Restore cursor position before updating
-
-
-    // Update the editor content safely
-    // editor.current.value = contentHTML
-    editor.current.setEditorValue(contentHTML)
-    // container.innerHTML = contentHTML;
-    if (cursorPosition) {
-      restoreCursorPosition(cursorPosition);
-    }
+    if (!docData || !docData.content) return; // Ensure everything is loaded
 
     updateTOC();
     docDataRef.current = docData;
@@ -288,8 +263,6 @@ export default function TextEditor() {
             }
           }
         }
-
-
       },
       {
         name: "subNumberedlist",
@@ -351,6 +324,8 @@ export default function TextEditor() {
         exec: (editor) => {
           const currentDocData = docDataRef.current
           const pageNums = currentDocData?.content.map(page => page.pageNumber)
+          console.log(pageNums);
+          
           const maxPageNumber = Math.max(...pageNums); // Get the next page number
           const newPage = {
             pageNumber: maxPageNumber + 1,
@@ -364,6 +339,11 @@ export default function TextEditor() {
             _id: params.docId,
             newPages: [newPage]
           });
+          setTimeout(() => {
+            const updatedData = docDataRef.current;
+            
+            updateEditorContent(updatedData, cursorPosition)
+          }, 200)
         },
       },
       {
@@ -386,12 +366,19 @@ export default function TextEditor() {
             newPages: [],
             updatedPages: []
           });
+          setTimeout(() => {
+            const updatedData = docDataRef.current;
+            updateEditorContent(updatedData, cursorPosition)
+          }, 200)
         },
       },
       ...Jodit.defaultOptions.buttons.slice(3),
     ],
-    enter: "p",
-
+    enter: "br",
+    cleanHTML: {
+      fillEmptyParagraph: false, // Prevent Jodit from adding extra spans
+      removeEmptyNodes: true, // Clean unnecessary empty nodes
+    },
     askBeforePasteHTML: false,
     events: {
       afterInit: (editor) => {
@@ -403,9 +390,14 @@ export default function TextEditor() {
     h3 { font-size: 1.5rem; font-weight: bold; } 
   </style>`
         );
+
+        // // Make the default Jodit container non-editable
+        // editor.editor.setAttribute("contenteditable", "false");
       },
     },
   }
+
+
 
 
   return (
@@ -438,20 +430,20 @@ export default function TextEditor() {
               ref={editor} // ✅ Assign the ref
               config={editorConfigs}
               value={JSON.stringify(docData?.content.map((page, i) =>
-                `<div id="page-${page.pageNumber}" class="docPage">
-                <div class="page-number">${i + 1}</div>
-                  ${page.content}
+                `<div contenteditable="true" id="page-${page.pageNumber}" class="docPage">
+                <div contenteditable="false" class="page-number">${i + 1}</div>
+      ${page.content || ""}
                 </div>`
               ).join(""))}
               onChange={(newContent) => {
                 const cursor = saveCursorPosition()
-                  setCursorPosition(cursor)
+                setCursorPosition(cursor)
                 setTimeout(() => {
                   const currentDocData = docDataRef.current;
                   let updatedPages = [];
                   let deletedPages = [];
                   let newPages = [];
-                  
+
                   currentDocData.content.forEach((page) => {
                     const pageNumber = page.pageNumber;
                     const pageElement = document.getElementById('page-' + pageNumber);
@@ -469,25 +461,15 @@ export default function TextEditor() {
                       // Get the updated inner HTML of the cloned node (without the page number)
                       const updatedPageContent = cloned.innerHTML.trim();
 
-                      // if (pageContentElement.scrollHeight > 600) {
-                      //   // Recursively check the next page
-                      //   console.log('overflowinfg the height');
-                      //   console.log(pageNumber);
 
-
-                      //   const result = handlePageOverflow(pageNumber, pageContentElement);
-                      //   updatedPages = [...updatedPages, ...result.overflowPages.updatedPages];
-                      //   newPages = [...newPages, ...result.overflowPages.newPages];
-
-                      // } else {
                       const difference = levenshtein.get(page.content, updatedPageContent);
-                      if (difference > 20) {
+                      if (difference > 10) {
                         updatedPages.push({
                           pageNumber,
                           content: updatedPageContent,
                         });
                       }
-                      // }
+
                     } else {
                       deletedPages.push(pageNumber);
                     }
@@ -496,7 +478,7 @@ export default function TextEditor() {
                   // Ensure at least one page exists
                   const existingPages = document.getElementsByClassName('docPage');
                   if (existingPages.length === 0) {
-                    newPages.push({ pageNumber: 1, content: "" });
+                    newPages.push({ pageNumber: 1, content: `` });
                   }
                   const commentsToRemove = getCommentsToRemove(store);
                   if (updatedPages.length > 0 || deletedPages.length > 0 || newPages.length > 0) {
@@ -507,19 +489,16 @@ export default function TextEditor() {
                       newPages,
                       commentsToRemove
                     });
-
-                    // // Trigger onChange again with new content
-                    // const updatedDocData = {
-                    //     content: [
-                    //         ...currentDocData.content.filter(p => !deletedPages.includes(p.pageNumber)),
-                    //         ...updatedPages,
-                    //         ...newPages
-                    //     ]
-                    // };
-                    // docDataRef.current = updatedDocData; // Update the reference
-                    // onChange(updatedDocData); // Call onChange with updated document data
                   }
-                }, 300)
+
+                  if (existingPages.length === 0) {
+                    setTimeout(()=>{
+                      const updatedData = docDataRef.current;
+                      updateEditorContent(updatedData, cursor)
+
+                    }, 150)
+                  }
+                }, 200)
               }}
 
             />

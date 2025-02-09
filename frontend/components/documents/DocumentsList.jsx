@@ -42,7 +42,8 @@ export default function DocumentsList() {
                   setLoading(true)
                   setDocState(doc);
                   setPages([])
-                  router.push(`/doc-editor/${doc._id}`);
+                  window.location.href = `/doc-editor/${doc._id}`
+                  // router.push(`/doc-editor/${doc._id}`);
                   }} key={doc._id} className="hover cursor-pointer" >
                   <th>{doc.docID}</th>
                   <td>{doc.title}</td>

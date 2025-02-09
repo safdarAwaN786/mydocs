@@ -4,10 +4,11 @@
 
 .jodit-container:not(.jodit_inline) .jodit-wysiwyg {
   background-color: #fafafa !important;
-  min-height: 1500px !important;
+  min-height: 1000px !important;
   padding: 0px !important;
   border: 0px solid #949393 !important;
   overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 .docPage {
@@ -16,7 +17,7 @@
   padding-top: 0px !important;
   padding: 20px !important;
   min-height: 1500px !important;
-  margin: 30px 0px;
+  margin-top: 30px;
   width: 100%;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -70,8 +71,16 @@
   position: sticky !important;
  
 }
-
-
+.page-number {
+  pointer-events: none !important; /* Prevent interaction */
+  user-select: none !important; /* Disable text selection */
+}
+.initPageDiv{
+  min-height: 100px !important;
+}
+/* .overall {
+  height: 100% !important;
+} */
 .page-number {
   position: absolute;
   top: 2px;
