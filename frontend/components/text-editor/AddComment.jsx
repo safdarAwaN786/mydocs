@@ -52,7 +52,7 @@ export default function AddComment({ docId }) {
         setDocData(newDocData);
         setTimeout(()=>{
             
-            updateEditorContent(newDocData, cursorPosition)
+            updateEditorContent(newDocData)
           }, 150)
         // Update the editor pages
         updatedPages.forEach(({ pageNumber, content }) => {
