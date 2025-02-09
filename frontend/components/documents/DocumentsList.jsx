@@ -21,7 +21,7 @@ export default function DocumentsList() {
 
   return (
     <>
-    {(isLoading || loading) && (
+    {((isLoading || loading) && !data) && (
       <Loading />
     )}
       <div className="d-flex flex-col bg-white py-12 px-[300px]">
